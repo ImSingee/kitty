@@ -16,7 +16,7 @@ import (
 const help = `Usage:
   kitty install
   kitty uninstall
-  kitty set|add <file> <cmd>
+  kitty set|add <hook-name> <cmd>
 `
 
 func main() {
@@ -44,14 +44,14 @@ func main() {
 			},
 		},
 		&cobra.Command{
-			Use:  "set <file> <cmd>",
+			Use:  "set <hook> <cmd>",
 			Args: cobra.ExactArgs(2),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				return set(args[0], args[1])
 			},
 		},
 		&cobra.Command{
-			Use:  "add <file> <cmd>",
+			Use:  "add <hook> <cmd>",
 			Args: cobra.ExactArgs(2),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				return add(args[0], args[1])
@@ -131,8 +131,17 @@ func uninstall() error {
 	return nil
 }
 
+func getKittyName(file string) string {
+	if !strings.Contains(file, "/") && !strings.Contains(file, "\\") {
+		return ".kitty/" + file
+	}
+
+	return file
+}
+
 // Create a hook file if it doesn't exist or overwrite it
 func set(file string, cmd string) error {
+	file = getKittyName(file)
 	userInputFile := file
 	file, err := filepath.Abs(file)
 	if err != nil {
@@ -173,6 +182,8 @@ You will have to commit the file to have git keep track of the executable bit.`)
 
 // Create a hook if it doesn't exist or append command to it
 func add(file string, cmd string) error {
+	file = getKittyName(file)
+
 	if _, err := os.Stat(file); err != nil {
 		if os.IsNotExist(err) {
 			return set(file, cmd)

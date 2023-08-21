@@ -23,7 +23,7 @@ kitty install
 Add a hook:
 
 ```shell
-kitty add .kitty/pre-commit "go test"
+kitty add pre-commit "go test"
 git add .kitty/pre-commit
 ```
 
