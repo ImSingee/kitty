@@ -8,6 +8,7 @@ require (
 	github.com/google/uuid v1.3.1
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
+	github.com/ysmood/gson v0.7.3
 )
 
 require (

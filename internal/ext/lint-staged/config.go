@@ -8,6 +8,7 @@ import (
 	"github.com/ImSingee/go-ex/exstrings"
 	"github.com/ImSingee/go-ex/mr"
 	"github.com/ImSingee/go-ex/set"
+	"github.com/ysmood/gson"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -18,7 +19,16 @@ import (
 
 type Config struct {
 	Path  string
-	Rules map[string][]string
+	Rules []*Rule
+}
+
+type Rule struct {
+	Glob     string
+	Commands []*Command
+}
+
+type Command struct {
+	Command string
 }
 
 func searchConfigs(cwd, gitDir, configPath string, configObject *Config) ([]*Config, error) {
@@ -127,58 +137,91 @@ func loadConfig(file string) (*Config, error) {
 		return nil, ee.Wrap(err, "cannot read config file")
 	}
 
-	config := &Config{}
-
 	in, err := jsonLoad(content)
 	if err != nil {
 		return nil, err
 	}
 
-	config.Path = file
-	config.Rules = make(map[string][]string, len(in))
+	config := &Config{
+		Path:  file,
+		Rules: make([]*Rule, 0, len(in)),
+	}
+
 	for k, v := range in {
-		vv, err := parseStringList(k, v)
+		vv, err := parseConfigRuleEntry(k, v)
 		if err != nil {
 			return nil, err
 		}
-		config.Rules[k] = vv
+		config.Rules = append(config.Rules, vv)
 	}
+
+	// FIXME only sort temp (future maybe gson can match order with json)
 
 	return config, err
 
 }
 
-func jsonLoad(data []byte) (map[string]any, error) {
+func jsonLoad(data []byte) (map[string]gson.JSON, error) {
 	in := map[string]any{}
 
 	err := json.Unmarshal(data, &in)
+	if err != nil {
+		return nil, err
+	}
 
-	return in, err
+	return gson.New(in).Map(), nil
 }
 
 func numberOfLevels(p string) int {
 	return strings.Count(p, string(filepath.Separator))
 }
 
-func parseStringList(key string, v any) ([]string, error) {
-	switch vv := v.(type) {
+func parseConfigRuleEntry(key string, v gson.JSON) (*Rule, error) {
+	rule := &Rule{
+		Glob:     key,
+		Commands: nil,
+	}
+
+	switch vv := v.Val().(type) {
 	case nil:
-		return nil, fmt.Errorf("invalid nil value for key %s", key)
+		return nil, fmt.Errorf("invalid nil command for %s", key)
 	case string:
-		return []string{vv}, nil
+		cmd, err := parseStringCommand(vv)
+		if err != nil {
+			return nil, ee.Wrapf(err, "cannot parse command `%s`", vv)
+		}
+		rule.Commands = []*Command{cmd}
+		return rule, nil
 	case []any:
-		result := make([]string, 0, len(vv))
-		for _, vvv := range vv {
-			s, ok := vvv.(string)
-			if !ok {
-				return nil, fmt.Errorf("invalid string list for key %s", key)
+		result := make([]*Command, 0, len(vv))
+		for i, vvv := range vv {
+			s, err := parseRule(vvv)
+			if err != nil {
+				return nil, fmt.Errorf("invalid command for %s.%d: %w", key, i+1, err)
 			}
 			result = append(result, s)
 		}
-		return result, nil
+		rule.Commands = result
+		return rule, nil
 	default:
 		return nil, fmt.Errorf("invalid value type (must be string or string list) for key %s", key)
 	}
+}
+
+func parseRule(v any) (*Command, error) {
+	// only support string now
+	if str, ok := v.(string); ok {
+		return parseStringCommand(str)
+	}
+
+	return nil, fmt.Errorf("invalid value type (must be string) for rule")
+}
+
+func parseStringCommand(cmd string) (*Command, error) {
+	// TODO support more options
+	// e.g. [relative = true]
+
+	return &Command{Command: cmd}, nil
 }
 
 // groupFilesByConfig map file to specific (deepest level) config

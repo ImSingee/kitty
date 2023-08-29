@@ -1,12 +1,16 @@
 package lintstaged
 
 import (
+	"fmt"
 	"github.com/ImSingee/go-ex/ee"
+	"github.com/ImSingee/go-ex/glob"
 	"github.com/ImSingee/go-ex/mr"
 	"github.com/ImSingee/kitty/internal/lib/tl"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 )
 
 func runAll(options *Options) (*State, error) {
@@ -112,6 +116,13 @@ func runAll(options *Options) (*State, error) {
 			}
 		}
 	}
+	handleTaskError := func(result *tl.Result) {
+		if result.Error {
+			ctx.taskError = true
+		}
+	}
+
+	subTasks := generateTasksToRun(ctx, filesByConfig)
 
 	tasks := []*tl.Task{
 		{
@@ -136,13 +147,19 @@ func runAll(options *Options) (*State, error) {
 		{
 			Title: "Running tasks for staged files...",
 			Run: func(callback tl.TaskCallback) error {
+				if ctx.internalError {
+					callback.Skip("internal error")
+					return nil
+				}
+
 				callback.AddSubTaskList(tl.NewTaskList(
-					[]*tl.Task{}, // TODO
+					subTasks,
 					tl.WithExitOnError(true),
 				))
 
 				return nil // TODO concurrent
 			},
+			PostRun: handleTaskError,
 			Options: []tl.OptionApplier{
 				tl.WithExitOnError(false),
 			},
@@ -229,58 +246,10 @@ func runAll(options *Options) (*State, error) {
 		},
 	}
 
-	tasks = mr.Filter(tasks, func(task *tl.Task, _ int) bool { return task != nil })
 	runner := tl.New(tasks, tl.WithExitOnError(true))
 
 	/*
-	 [
-	      {
-	        title: 'Preparing lint-staged...',
-	        task: (ctx) => git.prepare(ctx),
-	      },
-	      {
-	        title: 'Hiding unstaged changes to partially staged files...',
-	        task: (ctx) => git.hideUnstagedChanges(ctx),
-	        enabled: hasPartiallyStagedFiles,
-	      },
-	      {
-	        title: `Running tasks for staged files...`,
-	        task: (ctx, task) => task.newListr(listrTasks, { concurrent }),
-	        skip: () => listrTasks.every((task) => task.skip()),
-	      },
-	      {
-	        title: 'Applying modifications from tasks...',
-	        task: (ctx) => git.applyModifications(ctx),
-	        skip: applyModificationsSkipped,
-	      },
-	      {
-	        title: 'Restoring unstaged changes to partially staged files...',
-	        task: (ctx) => git.restoreUnstagedChanges(ctx),
-	        enabled: hasPartiallyStagedFiles,
-	        skip: restoreUnstagedChangesSkipped,
-	      },
-	      {
-	        title: 'Reverting to original state because of errors...',
-	        task: (ctx) => git.restoreOriginalState(ctx),
-	        enabled: restoreOriginalStateEnabled,
-	        skip: restoreOriginalStateSkipped,
-	      },
-	      {
-	        title: 'Cleaning up temporary files...',
-	        task: (ctx) => git.cleanup(ctx),
-	        enabled: cleanupEnabled,
-	        skip: cleanupSkipped,
-	      },
-	    ],
-	*/
 
-	/*
-
-	  const hasMultipleConfigs = numberOfConfigs > 1
-
-	  // lint-staged 10 will automatically add modifications to index
-	  // Warn user when their command includes `git add`
-	  let hasDeprecatedGitAdd = false
 
 	  const listrTasks = []
 
@@ -377,4 +346,114 @@ func runAll(options *Options) (*State, error) {
 	err = runner.Run()
 
 	return ctx, err
+}
+
+func generateTasksToRun(ctx *State, config map[*Config][]string) []*tl.Task {
+	type ConfigEntries struct {
+		Config    *Config
+		Filenames []string
+		Tasks     []*tl.Task
+	}
+
+	all := make([]*ConfigEntries, 0, len(config))
+
+	for config, files := range config {
+		tasks := generateTasksForConfig(ctx, config, files)
+
+		all = append(all, &ConfigEntries{
+			Config:    config,
+			Filenames: files,
+			Tasks:     tasks,
+		})
+	}
+
+	sort.Slice(all, func(i, j int) bool {
+		return strings.Compare(all[i].Config.Path, all[j].Config.Path) < 0
+	})
+
+	if len(all) == 1 {
+		return all[0].Tasks
+	}
+
+	return mr.Map(all, func(in *ConfigEntries, index int) *tl.Task {
+		return &tl.Task{
+			Title: in.Config.Path + fmt.Sprintf(" - %d files", len(in.Filenames)),
+			Run: func(callback tl.TaskCallback) error {
+				callback.AddSubTask(in.Tasks...)
+				return nil
+			},
+			PostRun: nil, // TODO if not error, then hide self
+		}
+	})
+}
+
+func generateTasksForConfig(ctx *State, config *Config, files []string) []*tl.Task {
+	type RuleConfigEntries struct {
+		Rule string
+	}
+
+	if len(config.Rules) == 0 {
+		return []*tl.Task{{
+			Title: "No Rules",
+			Run: func(callback tl.TaskCallback) error {
+				return nil
+			},
+		}}
+	}
+
+	wd := filepath.Dir(config.Path)
+
+	if len(config.Rules) == 1 {
+		return []*tl.Task{generateTaskForRule(ctx, wd, config.Rules[0], files)}
+	}
+
+	return mr.Map(config.Rules, func(rule *Rule, index int) *tl.Task {
+		return generateTaskForRule(ctx, wd, rule, files)
+	})
+}
+
+func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string) *tl.Task {
+	files = mr.Filter(files, func(in string, index int) bool {
+		return strings.HasPrefix(in, wd+string(filepath.Separator))
+	})
+	files = mr.Filter(files, func(in string, index int) bool {
+		// TODO support multi level match
+		return glob.Match(rule.Glob, filepath.Base(in))
+	})
+
+	suffix := fmt.Sprintf(" - %d files", len(files))
+	if len(files) == 0 {
+		suffix = " - no files"
+	}
+
+	cmdTasks := mr.Map(rule.Commands, func(cmd *Command, index int) *tl.Task {
+		return generateTaskForCommand(ctx, wd, cmd, files)
+	})
+
+	return &tl.Task{
+		Title: rule.Glob + suffix,
+		Run: func(callback tl.TaskCallback) error {
+			if len(files) == 0 {
+				callback.Skip("")
+				return nil
+			}
+
+			callback.AddSubTask(cmdTasks...)
+			return nil
+		},
+	}
+}
+
+func generateTaskForCommand(ctx *State, wd string, cmd *Command, onFiles []string) *tl.Task {
+	return &tl.Task{
+		Title: cmd.Command,
+		Run: func(callback tl.TaskCallback) error {
+
+			// TODO allow ctrl+c to cancel
+
+			// TODO run command
+
+			return nil
+		},
+	}
 }
