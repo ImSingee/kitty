@@ -89,18 +89,27 @@ func (tl *TaskList) prepare() {
 	tl.use()
 }
 
-func (tl *TaskList) start(p *tea.Program) (iAmError bool) {
+func (tl *TaskList) start(p *tea.Program) (result *Result) {
+	result = &Result{
+		TaskList:   tl,
+		Enabled:    true,
+		SubResults: make([]*Result, len(tl.tasks)),
+	}
+
 	preventContinue := false
 
-	for _, task := range tl.tasks {
+	for i, task := range tl.tasks {
 		if preventContinue {
 			task.skip(p)
 			continue
 		}
 
-		taskIsError := task.start(p)
-		if taskIsError {
-			iAmError = true
+		taskResult := task.start(p)
+		result.SubResults[i] = taskResult
+
+		if taskResult.Error {
+			result.Error = true
+
 			if tl.exitOnError && task.exitOnError {
 				preventContinue = true // stop current task list execution
 			}

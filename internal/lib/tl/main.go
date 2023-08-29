@@ -26,6 +26,8 @@ func (runner *Runner) Run() error {
 		runner.start(p)
 	}()
 
+	// TODO refactor this (return result in Run)
+
 	_, err := p.Run()
 	if err != nil {
 		return err
@@ -45,16 +47,17 @@ func (runner *Runner) prepare() {
 	runner.tl.prepare()
 }
 
-func (runner *Runner) start(p *tea.Program) {
+func (runner *Runner) start(p *tea.Program) *Result {
 	defer func() {
 		runner.done = true
 		p.Send(tea.Quit())
 	}()
 
-	someTasksError := runner.tl.start(p)
-	if someTasksError {
+	result := runner.tl.start(p)
+	if result.Error {
 		runner.err = fmt.Errorf("some tasks error")
 	}
+	return result
 }
 
 type runnerModel struct {

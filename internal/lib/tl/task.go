@@ -2,15 +2,18 @@ package tl
 
 import (
 	"fmt"
+	"github.com/ImSingee/go-ex/ee"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/google/uuid"
 	"strings"
 )
 
 type Task struct {
-	Title  string
-	Run    func(callback TaskCallback) error
-	Enable func() bool
+	Title string
+	Run   func(callback TaskCallback) error
+	// PostRun runs after Run (even if Run failed) with result
+	PostRun func(result *Result)
+	Enable  func() bool
 
 	Options []OptionApplier
 
@@ -41,45 +44,40 @@ func (t *Task) use() {
 	}
 }
 
-func (t *Task) start(p *tea.Program) (iAmError bool) {
-	if !t.shouldEnable() {
-		return false
+func (t *Task) start(p *tea.Program) (result *Result) {
+	result = &Result{
+		Task:    t,
+		Enabled: t.shouldEnable(),
+	}
+
+	if !result.Enabled {
+		return
 	}
 
 	p.Send(&eventTaskStart{
 		Id: t.id,
 	})
 
-	var skipped bool
-	var skipReason string
-	var hide bool
-	var isError bool
-	var err error
-
+	// update UI
 	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("panic: %v", e)
-		}
-
-		if hide {
+		if result.Hide {
 			p.Send(&eventTaskHide{
 				Id: t.id,
 			})
 		}
 
-		if isError || err != nil {
+		if result.Error {
 			p.Send(&eventTaskFail{
 				Id:  t.id,
-				Err: err,
+				Err: result.Err,
 			})
-			iAmError = true
 			return
 		}
 
-		if skipped {
+		if result.Skipped {
 			p.Send(&eventTaskSkip{
 				Id:     t.id,
-				Reason: skipReason,
+				Reason: result.SkipReason,
 			})
 			return
 		}
@@ -90,14 +88,27 @@ func (t *Task) start(p *tea.Program) (iAmError bool) {
 	}()
 
 	controller := t.controller()
-	err = t.Run(controller)
-	if err != nil {
+
+	defer func() {
+		t.postRun(result)
+	}()
+
+	result.Err = t.run(controller)
+	if result.Err != nil {
+		result.Error = true
+	}
+
+	if controller.hide {
+		result.Hide = true
+	}
+
+	if result.Err != nil {
 		return
 	}
 
 	if controller.skipped {
-		skipped = true
-		skipReason = controller.skipReason
+		result.Skipped = true
+		result.SkipReason = controller.skipReason
 		return
 	}
 
@@ -110,18 +121,51 @@ func (t *Task) start(p *tea.Program) (iAmError bool) {
 			List: controller.subList.createModel(),
 		})
 
-		subListError := controller.subList.start(p)
-		if subListError {
-			isError = true // without reason
+		subListResult := controller.subList.start(p)
+		result.TaskList = subListResult.TaskList
+		result.SubResults = subListResult.SubResults
+
+		if subListResult.Error {
+			result.Error = true // without reason
 			return
 		}
 	}
 
-	if controller.hide {
-		hide = true
+	return
+}
+
+func (t *Task) run(controller *taskController) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("panic: %v", e)
+		}
+	}()
+
+	if t.Run == nil {
+		return ee.New("no Run function provided")
 	}
 
-	return
+	return t.Run(controller)
+}
+
+func (t *Task) postRun(result *Result) {
+	defer func() {
+		if e := recover(); e != nil {
+			if result.Err != nil {
+				result.Err = fmt.Errorf("PostRun panic: %v; Run errors: %w", e, result.Err)
+			} else if result.Error {
+				result.Err = fmt.Errorf("PostRun panic: %v; Run contains anoynomous errors", e)
+			} else {
+				result.Err = fmt.Errorf("PostRun panic: %v", e)
+			}
+
+			result.Error = true
+		}
+	}()
+
+	if t.PostRun != nil {
+		t.PostRun(result)
+	}
 }
 
 func (t *Task) controller() *taskController {

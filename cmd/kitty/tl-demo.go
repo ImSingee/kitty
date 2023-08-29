@@ -11,6 +11,7 @@ import (
 
 func init() {
 	enableSubSub4 := false
+	subsub6Error := false
 
 	extensions = append(extensions,
 		&cobra.Command{
@@ -104,6 +105,27 @@ func init() {
 												Run: func(callback tl.TaskCallback) error {
 													callback.Hide()
 													return nil
+												},
+											},
+											{
+												Title: "subsub6 (panic)",
+												Run: func(callback tl.TaskCallback) error {
+													panic("test")
+													return nil
+												},
+												PostRun: func(result *tl.Result) {
+													if result.Error {
+														subsub6Error = true
+													}
+												},
+											},
+											{
+												Title: "subsub7 (only run if subsub6 is error)",
+												Run: func(callback tl.TaskCallback) error {
+													return nil
+												},
+												Enable: func() bool {
+													return subsub6Error
 												},
 											},
 										},
