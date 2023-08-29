@@ -52,12 +52,19 @@ func (t *Task) start(p *tea.Program) (iAmError bool) {
 
 	var skipped bool
 	var skipReason string
+	var hide bool
 	var isError bool
 	var err error
 
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("panic: %v", e)
+		}
+
+		if hide {
+			p.Send(&eventTaskHide{
+				Id: t.id,
+			})
 		}
 
 		if isError || err != nil {
@@ -110,6 +117,10 @@ func (t *Task) start(p *tea.Program) (iAmError bool) {
 		}
 	}
 
+	if controller.hide {
+		hide = true
+	}
+
 	return
 }
 
@@ -159,7 +170,7 @@ func (t *Task) createModel() taskModel {
 		title:  t.Title,
 		status: taskStatusPending,
 		enable: t.shouldEnable(),
-		hide:   false, // TODO
+		hide:   false,
 	}
 
 	return m
@@ -196,6 +207,11 @@ func (m taskModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.id == v.Id {
 			m.status = taskStatusSkipped
 			m.skipReason = v.Reason
+			return m, nil
+		}
+	case *eventTaskHide:
+		if m.id == v.Id {
+			m.hide = true
 			return m, nil
 		}
 	case *eventTaskAddSubList:
@@ -276,6 +292,7 @@ type taskController struct {
 
 	skipped    bool
 	skipReason string
+	hide       bool
 	subList    *TaskList
 }
 
@@ -286,6 +303,10 @@ type taskController struct {
 func (c *taskController) Skip(reason string) {
 	c.skipped = true
 	c.skipReason = reason
+}
+
+func (c *taskController) Hide() {
+	c.hide = true
 }
 
 func (c *taskController) AddSubTaskList(taskList *TaskList) {

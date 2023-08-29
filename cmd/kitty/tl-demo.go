@@ -91,6 +91,13 @@ func init() {
 													return true
 												},
 											},
+											{
+												Title: "subsub5 (hide after run)",
+												Run: func(callback tl.TaskCallback) error {
+													callback.Hide()
+													return nil
+												},
+											},
 										},
 									))
 									return nil

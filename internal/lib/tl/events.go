@@ -18,6 +18,10 @@ type eventTaskSkip struct {
 	Reason string
 }
 
+type eventTaskHide struct {
+	Id string
+}
+
 type eventTaskAddSubList struct {
 	Id   string
 	List tlModel
