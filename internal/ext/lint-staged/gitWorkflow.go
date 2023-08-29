@@ -5,7 +5,10 @@ import (
 	"github.com/ImSingee/go-ex/mr"
 	"github.com/ImSingee/kitty/internal/lib/git"
 	"log/slog"
+	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 type gitWorkflow struct {
@@ -14,6 +17,8 @@ type gitWorkflow struct {
 	logger       *slog.Logger
 
 	partiallyStagedFiles []string
+	deletedFiles         []string
+	mergeStatusBackup    map[string][]byte
 }
 
 func newGitWorkflow(root string, gitConfigDir string, logger *slog.Logger) *gitWorkflow {
@@ -37,10 +42,11 @@ func (g *gitWorkflow) execStatus() ([]git.FileStatus, error) {
 }
 
 // Get absolute path to file hidden inside .git
-func (g *gitWorkflow) getHiddenFilepath(filename string) string {
+func (g *gitWorkflow) getGitConfigDirFilepath(filename string) string {
 	return normalizePath(filepath.Join(g.gitConfigDir, filename))
 }
 
+const stashMessage = "lint-staged automatic backup"
 const PatchUnstaged = "lint-staged_unstaged.patch"
 
 var gitDiffArgs = []string{
@@ -56,6 +62,8 @@ var gitDiffArgs = []string{
 var gitApplyArgs = []string{"-v", "--whitespace=nowarn", "--recount", "--unidiff-zero"}
 
 // Create a diff of partially staged files and backup stash if enabled.
+//
+// will set state.hasPartiallyStagedFiles
 func (g *gitWorkflow) prepare(state *State) (err error) {
 	g.logger.Debug("Backing up original state...")
 
@@ -66,7 +74,7 @@ func (g *gitWorkflow) prepare(state *State) (err error) {
 
 	state.hasPartiallyStagedFiles = len(g.partiallyStagedFiles) > 0
 	if state.hasPartiallyStagedFiles {
-		unstagedPatch := g.getHiddenFilepath(PatchUnstaged)
+		unstagedPatch := g.getGitConfigDirFilepath(PatchUnstaged)
 
 		args := mr.Flats(
 			[]string{"diff"},
@@ -91,7 +99,7 @@ func (g *gitWorkflow) prepare(state *State) (err error) {
 		// Get a list of unstaged deleted files, because certain bugs might cause them to reappear:
 		// - in git versions =< 2.13.0 the `git stash --keep-index` option resurrects deleted files
 		// - git stash can't infer RD or MD states correctly, and will lose the deletion
-		state.deletedFiles, err = g.getDeletedFiles()
+		g.deletedFiles, err = g.getDeletedFiles()
 		if err != nil {
 			return ee.Wrap(err, "cannot get deleted files")
 		}
@@ -103,7 +111,7 @@ func (g *gitWorkflow) prepare(state *State) (err error) {
 		if err != nil {
 			return ee.Wrap(err, "cannot create stash")
 		}
-		_, err = g.execGit("stash", "store", "--quiet", "--message", "lint-staged automatic backup", hash)
+		_, err = g.execGit("stash", "store", "--quiet", "--message", stashMessage, hash)
 		if err != nil {
 			return ee.Wrap(err, "cannot save stash")
 		}
@@ -158,24 +166,179 @@ func (g *gitWorkflow) getDeletedFiles() ([]string, error) {
 	return files, nil
 }
 
-func (g *gitWorkflow) backupMergeStatus() error {
+// backupMergeStatus backup merge info to state
+func (g *gitWorkflow) backupMergeStatus() (err error) {
 	g.logger.Debug("Backing up merge status...")
-	g.logger.Warn("TODO: implement backupMergeStatus")
 
-	// this.mergeHeadFilename = path.resolve(gitConfigDir, MERGE_HEAD)
-	// this.mergeModeFilename = path.resolve(gitConfigDir, MERGE_MODE)
-	// this.mergeMsgFilename = path.resolve(gitConfigDir, MERGE_MSG)
-
-	// const MERGE_HEAD = 'MERGE_HEAD'
-	// const MERGE_MODE = 'MERGE_MODE'
-	// const MERGE_MSG = 'MERGE_MSG'
-
-	// await Promise.all([
-	//      readFile(this.mergeHeadFilename).then((buffer) => (this.mergeHeadBuffer = buffer)),
-	//      readFile(this.mergeModeFilename).then((buffer) => (this.mergeModeBuffer = buffer)),
-	//      readFile(this.mergeMsgFilename).then((buffer) => (this.mergeMsgBuffer = buffer)),
-	//    ])
+	g.mergeStatusBackup, err = readFiles(
+		g.getGitConfigDirFilepath("MERGE_HEAD"),
+		g.getGitConfigDirFilepath("MERGE_MODE"),
+		g.getGitConfigDirFilepath("MERGE_MSG"),
+	)
+	if err != nil {
+		return ee.Wrap(err, "cannot backup merge status")
+	}
 
 	g.logger.Debug("Done backing up merge state!")
+	return nil
+}
+
+// will ignore not-exist file
+func readFiles(filenames ...string) (map[string][]byte, error) {
+	result := make(map[string][]byte, len(filenames))
+	for _, filename := range filenames {
+		data, err := os.ReadFile(filename)
+		if err == nil {
+			result[filename] = data
+		} else if os.IsNotExist(err) {
+			continue
+		} else {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
+func writeFiles(record map[string][]byte) error {
+	for filename, data := range record {
+		err := os.WriteFile(filename, data, 0644)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Restore meta information about ongoing git merge
+//
+// will add ErrRestoreMergeStatus to state.errors if fail
+func (g *gitWorkflow) restoreMergeStatus(state *State) (err error) {
+	defer func() {
+		if err != nil {
+			state.errors.Add(ErrRestoreMergeStatus)
+		}
+	}()
+
+	g.logger.Debug("Restoring merge state...")
+
+	err = writeFiles(g.mergeStatusBackup)
+	if err != nil {
+		return ee.Wrap(err, "cannot restore merge status")
+	}
+
+	g.logger.Debug("Done backing up merge state!")
+	return nil
+}
+
+// Remove unstaged changes to all partially staged files, to avoid tasks from seeing them
+func (g *gitWorkflow) hideUnstagedChanges() error {
+	_, err := g.execGit(append([]string{"checkout", "--force", "--"}, g.partiallyStagedFiles...)...)
+	if err != nil {
+		// `git checkout --force` doesn't throw errors, so it shouldn't be possible to get here.
+		return err
+	}
+	return nil
+}
+
+// Restore unstaged changes to partially changed files.
+// If it at first fails, this is probably because of conflicts between new task modifications.
+// 3-way merge usually fixes this, and in case it doesn't we should just give up and throw.
+func (g *gitWorkflow) restoreUnstagedChanges() error {
+	g.logger.Debug("Restoring unstaged changes...")
+
+	unstagedPatch := g.getGitConfigDirFilepath(PatchUnstaged)
+
+	_, applyErr := g.execGit(mr.Flats([]string{"apply"}, gitApplyArgs, []string{unstagedPatch})...)
+	if applyErr == nil {
+		return nil
+	}
+
+	g.logger.Debug("Error while restoring changes", "error", applyErr)
+
+	g.logger.Debug("Retrying with 3-way merge...")
+
+	_, threeWayApplyErr := g.execGit(mr.Flats([]string{"apply"}, gitApplyArgs, []string{"--3way", unstagedPatch})...)
+	if threeWayApplyErr == nil {
+		return nil
+	}
+
+	g.logger.Debug("Error while restoring changes using 3-way merge", "error", threeWayApplyErr)
+
+	return ee.New("unstaged changes could not be restored due to a merge conflict")
+}
+
+// Restore original HEAD state in case of errors
+func (g *gitWorkflow) restoreOriginalState(state *State) (err error) {
+	g.logger.Debug("Restoring original state...")
+
+	backupStash, err := g.getBackupStashIndex()
+	if err != nil {
+		return ee.Wrap(err, "cannot get backup stash index")
+	}
+
+	_, err = g.execGit("reset", "--hard", "HEAD")
+	if err != nil {
+		return err
+	}
+	_, err = g.execGit("stash", "apply", "--quiet", "--index", backupStash)
+	if err != nil {
+		return err
+	}
+
+	err = g.restoreMergeStatus(state)
+	if err != nil {
+		return ee.Wrap(err, "cannot restore merge status")
+	}
+
+	// If stashing resurrected deleted files, clean them out
+	removeFilesAndIgnoreError(g.deletedFiles)
+
+	// Clean out patch
+	_ = os.Remove(g.getGitConfigDirFilepath(PatchUnstaged))
+
+	g.logger.Debug("Done restoring original state!")
+	return nil
+}
+
+func removeFilesAndIgnoreError(files []string) {
+	for _, file := range files {
+		_ = os.Remove(file)
+	}
+}
+
+// Get name of backup stash
+func (g *gitWorkflow) getBackupStashIndex() (string, error) {
+	stashes, err := g.execGitZ("stash", "list", "-z")
+	if err != nil {
+		return "", ee.Wrap(err, "cannot get stash list")
+	}
+
+	index := mr.FindIndex(stashes, func(stash string) bool {
+		return strings.Contains(stash, stashMessage)
+	})
+
+	if index == -1 {
+		return "", ee.New("miss lint-staged automatic backup")
+	}
+
+	return strconv.Itoa(index), nil
+}
+
+// Drop the created stashes after everything has run
+func (g *gitWorkflow) cleanup() error {
+	g.logger.Debug("Dropping backup stash...")
+
+	stash, err := g.getBackupStashIndex()
+	if err != nil {
+		return ee.Wrap(err, "cannot get backup stash index")
+	}
+
+	_, err = g.execGit("stash", "drop", "--quiet", stash)
+	if err != nil {
+		return ee.Wrap(err, "cannot drop backup stash")
+	}
+
+	g.logger.Debug("Done dropping backup stash!")
 	return nil
 }

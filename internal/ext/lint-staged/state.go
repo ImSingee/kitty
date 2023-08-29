@@ -3,20 +3,21 @@ package lintstaged
 import "github.com/ImSingee/go-ex/set"
 
 type State struct {
+	shouldBackup bool
+	quiet        bool
+
 	hasPartiallyStagedFiles bool
-	deletedFiles            []string
-	shouldBackup            bool
-	errors                  *set.Set[error]
-	events                  *struct{} // TODO
-	output                  []string
-	quiet                   bool
+
+	output        []string
+	errors        *set.Set[error]
+	internalError bool
+	taskError     bool
 }
 
 func getInitialState(options *Options) *State {
 	return &State{
 		hasPartiallyStagedFiles: false,
 		errors:                  set.New[error](),
-		events:                  nil, // TODO
 		quiet:                   options.Quiet,
 	}
 }

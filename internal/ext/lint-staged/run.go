@@ -28,9 +28,11 @@ func runAll(options *Options) (*State, error) {
 
 	gitDir, gitConfigDir, err := resolveGitRepo(cwd)
 	if err != nil {
+		ctx.errors.Add(ErrGitRepo)
 		return ctx, ee.Wrap(err, "cannot resolve git repository")
 	}
 	if gitDir == "" {
+		ctx.errors.Add(ErrGitRepo)
 		return ctx, ee.New("not a git repository")
 	}
 
@@ -48,6 +50,7 @@ func runAll(options *Options) (*State, error) {
 
 	files, err := getStagedFiles(options)
 	if err != nil {
+		ctx.errors.Add(ErrGetStagedFiles)
 		return ctx, ee.Wrap(err, "cannot get staged files")
 	}
 	slog.Debug("Loaded list of staged files in git", "files", files)
@@ -66,6 +69,7 @@ func runAll(options *Options) (*State, error) {
 	}
 
 	if len(foundConfigs) == 0 {
+		ctx.errors.Add(ErrConfigNotFound)
 		return ctx, ee.New("no configuration found") // TODO ErrCode ConfigNotFoundError
 	}
 
@@ -83,21 +87,39 @@ func runAll(options *Options) (*State, error) {
 
 	gw := newGitWorkflow(gitDir, gitConfigDir, slog.Default())
 
+	handleInternalError := func(result *tl.Result) {
+		if result.Error {
+			ctx.internalError = true
+		}
+	}
+	handleInternalErrorAnd := func(then func(result *tl.Result)) func(result *tl.Result) {
+		return func(result *tl.Result) {
+			if result.Error {
+				ctx.internalError = true
+				then(result)
+			}
+		}
+	}
+
 	tasks := []*tl.Task{
 		{
 			Title: "Preparing lint-staged...",
 			Run: func(callback tl.TaskCallback) error {
 				return gw.prepare(ctx)
 			},
+			PostRun: handleInternalError,
 		},
 		{
 			Title: "Hiding unstaged changes to partially staged files...",
 			Run: func(callback tl.TaskCallback) error {
-				return nil // TODO git.hideUnstagedChanges(ctx),
+				return gw.hideUnstagedChanges()
 			},
 			Enable: func() bool {
 				return ctx.hasPartiallyStagedFiles
 			},
+			PostRun: handleInternalErrorAnd(func(result *tl.Result) {
+				ctx.errors.Add(ErrHideUnstagedChanges)
+			}),
 		},
 		{
 			Title: "Running tasks for staged files...",
@@ -116,42 +138,72 @@ func runAll(options *Options) (*State, error) {
 		{
 			Title: "Applying modifications from tasks...",
 			Run: func(callback tl.TaskCallback) error {
-				//  skip: applyModificationsSkipped,
+				//  TODO skip: applyModificationsSkipped,
 
 				return nil // TODO git.applyModifications(ctx),
 			},
+			PostRun: handleInternalError,
 		},
 		{
 			Title: "Restoring unstaged changes to partially staged files...",
 			Run: func(callback tl.TaskCallback) error {
-				//  skip: restoreUnstagedChangesSkipped,
+				// if error, skip and use "Reverting to original state because of errors" step
+				if ctx.internalError {
+					callback.Skip("internal error")
+					return nil
+				}
+				if ctx.taskError {
+					callback.Skip("task error")
+					return nil
+				}
 
-				return nil // TODO git.restoreUnstagedChanges(ctx),
+				return gw.restoreUnstagedChanges()
 			},
 			Enable: func() bool {
 				return ctx.hasPartiallyStagedFiles
 			},
+			PostRun: handleInternalErrorAnd(func(result *tl.Result) {
+				ctx.errors.Add(ErrRestoreUnstagedChanges)
+			}),
 		},
 		{
 			Title: "Reverting to original state because of errors...",
 			Run: func(callback tl.TaskCallback) error {
-				//  skip: restoreOriginalStateSkipped
+				if ctx.internalError {
+					if ctx.errors.Has(ErrApplyEmptyCommit) || ctx.errors.Has(ErrRestoreUnstagedChanges) {
+						// continue
+					} else {
+						callback.Skip("internal error")
+						return nil
+					}
+				}
 
-				return nil
+				return gw.restoreOriginalState(ctx)
 			},
 			Enable: func() bool {
-				return false // restoreOriginalStateEnabled
+				return ctx.shouldBackup && (ctx.taskError || ctx.errors.Has(ErrApplyEmptyCommit) || ctx.errors.Has(ErrRestoreUnstagedChanges))
 			},
+			PostRun: handleInternalErrorAnd(func(result *tl.Result) {
+				ctx.errors.Add(ErrRestoreOriginalState)
+			}),
 		},
 		{
 			Title: "Cleaning up temporary files...",
 			Run: func(callback tl.TaskCallback) error {
-				//  skip: cleanupSkipped
+				// skip if previous (not - task) error
+				if ctx.internalError {
+					if ctx.errors.Has(ErrApplyEmptyCommit) || ctx.errors.Has(ErrRestoreUnstagedChanges) {
+						// continue
+					} else {
+						callback.Skip("internal error")
+						return nil
+					}
+				}
 
-				return nil // TODO git.cleanup(ctx),
+				return gw.cleanup()
 			},
 			Enable: func() bool {
-				return false // cleanupEnabled
+				return ctx.shouldBackup
 			},
 		},
 	}
