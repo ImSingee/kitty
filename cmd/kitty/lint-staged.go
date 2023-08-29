@@ -8,7 +8,6 @@ import (
 func init() {
 	var allowEmpty bool
 	var configPath string
-	var cwd string
 	var diff string
 	var diffFilter string
 	var stash bool
@@ -32,7 +31,6 @@ func init() {
 			options := &lintstaged.Options{
 				AllowEmpty: allowEmpty,
 				ConfigPath: configPath,
-				Cwd:        cwd,
 				Debug:      debug,
 				Diff:       diff,
 				DiffFilter: diffFilter,
@@ -50,7 +48,6 @@ func init() {
 	flags := cmd.Flags()
 	flags.BoolVar(&allowEmpty, "allow-empty", false, "allow empty commits when tasks revert all staged changes")
 	flags.StringVarP(&configPath, "config", "c", "", "path to configuration file, or - to read from stdin")
-	flags.StringVar(&cwd, "cwd", "", "run all tasks in specific directory, instead of the current")
 	flags.StringVar(&diff, "diff", "", `override the default "--staged" flag of "git diff" to get list of files. Implies "--stash=false"`)
 	flags.StringVar(&diffFilter, "diff-filter", "", `override the default "--diff-filter=ACMR" flag of "git diff" to get list of files`)
 	flags.BoolVar(&stash, "stash", true, "enable the backup stash, and revert in case of errors")

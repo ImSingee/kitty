@@ -1,7 +1,6 @@
 package lintstaged
 
 import (
-	"github.com/ImSingee/go-ex/mr"
 	"github.com/ImSingee/kitty/internal/lib/git"
 	"log/slog"
 	"os"
@@ -99,15 +98,14 @@ func getDiffCommand(diff, diffFilter string) []string {
 	return append([]string{"diff", "--name-only", "-z", "--diff-filter=" + diffFilter}, diffArgs...)
 }
 
-func getStagedFiles(options *Options) ([]string, error) {
-	lines, err := execGitZ(getDiffCommand(options.Diff, options.Diff), options.Cwd)
+// getStagedFiles returns a list of staged files in relative path to git root
+func getStagedFiles(options *Options, gitDir string) ([]string, error) {
+	lines, err := execGitZ(getDiffCommand(options.Diff, options.DiffFilter), gitDir)
 	if err != nil {
 		return nil, err
 	}
 
-	return mr.Map(lines, func(in string, _index int) string {
-		return normalizePath(filepath.Join(options.Cwd, in))
-	}), nil
+	return lines, nil
 }
 func parseGitZOutput(o string) []string {
 	o = strings.TrimSuffix(o, "\x00")

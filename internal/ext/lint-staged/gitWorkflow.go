@@ -12,21 +12,17 @@ import (
 )
 
 type gitWorkflow struct {
-	root         string
-	gitConfigDir string
-	logger       *slog.Logger
+	root                  string
+	gitConfigDir          string
+	chunkedFilenamesArray [][]string
+	allowEmpty            bool
+	diff                  string
+	diffFilter            string
+	logger                *slog.Logger
 
 	partiallyStagedFiles []string
 	deletedFiles         []string
 	mergeStatusBackup    map[string][]byte
-}
-
-func newGitWorkflow(root string, gitConfigDir string, logger *slog.Logger) *gitWorkflow {
-	return &gitWorkflow{
-		root:         root,
-		gitConfigDir: gitConfigDir,
-		logger:       logger,
-	}
 }
 
 func (g *gitWorkflow) execGit(args ...string) (string, error) {
@@ -323,6 +319,44 @@ func (g *gitWorkflow) getBackupStashIndex() (string, error) {
 	}
 
 	return strconv.Itoa(index), nil
+}
+
+// Applies back task modifications, and unstaged changes hidden in the stash.
+// In case of a merge-conflict retry with 3-way merge.
+//
+// may add ErrApplyEmptyCommit to state.errors
+func (g *gitWorkflow) applyModifications(state *State) error {
+	g.logger.Debug("Adding task modifications to index...")
+
+	// `matchedFileChunks` includes staged files that lint-staged originally detected and matched against a task.
+	// Add only these files so any 3rd-party edits to other files won't be included in the commit.
+	// These additions per chunk are run "serially" to prevent race conditions.
+	// Git add creates a lockfile in the repo causing concurrent operations to fail.
+	for i, filenames := range g.chunkedFilenamesArray {
+		_, err := g.execGit(append([]string{"add", "--"}, filenames...)...)
+		if err != nil {
+			return ee.Wrapf(err, "cannot add modified files to index (round = %d, files = %v)", i+1, filenames)
+		}
+	}
+
+	g.logger.Debug("Done adding task modifications to index!")
+
+	if !g.allowEmpty {
+		stagedFilesAfterAdd, err := g.execGitZ(getDiffCommand(g.diff, g.diffFilter)...)
+		if err != nil {
+			return ee.Wrap(err, "cannot get staged files after add")
+		}
+
+		if len(stagedFilesAfterAdd) == 0 {
+			// Tasks reverted all staged changes and the commit would be empty
+			// Throw error to stop commit unless `--allow-empty` was used
+
+			state.errors.Add(ErrApplyEmptyCommit)
+			return ee.New("empty git commit (prevented)")
+		}
+	}
+
+	return nil
 }
 
 // Drop the created stashes after everything has run

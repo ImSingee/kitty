@@ -8,7 +8,6 @@ import (
 type Options struct {
 	AllowEmpty bool
 	ConfigPath string
-	Cwd        string
 	Debug      bool
 	Diff       string
 	DiffFilter string
@@ -39,10 +38,6 @@ func Run(options *Options) error {
 }
 
 func validateOptions(options *Options) error {
-	if options.Cwd != "" {
-		// TODO check is folder and have permission to access
-	}
-
 	if options.Shell != "" {
 		// TODO check is executable and have permission to execute
 	}

@@ -12,17 +12,10 @@ import (
 func runAll(options *Options) (*State, error) {
 	slog.Debug("Running all linter scripts...")
 
-	cwd := options.Cwd
-	err := error(nil)
-	if cwd == "" {
-		cwd, err = os.Getwd()
-	} else {
-		cwd, err = filepath.Abs(cwd)
-	}
+	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, ee.Wrap(err, "cannot get current working directory")
 	}
-	options.Cwd = cwd
 
 	ctx := getInitialState(options)
 
@@ -48,15 +41,23 @@ func runAll(options *Options) (*State, error) {
 		slog.Warn(skippingBackup(hasInitialCommit, options.Diff)) // TODO use print
 	}
 
-	files, err := getStagedFiles(options)
+	// get staged files (relative path)
+	relativeFiles, err := getStagedFiles(options, gitDir)
 	if err != nil {
 		ctx.errors.Add(ErrGetStagedFiles)
 		return ctx, ee.Wrap(err, "cannot get staged files")
 	}
-	slog.Debug("Loaded list of staged files in git", "files", files)
+
+	slog.Debug("Loaded list of staged files in git (relative)", "files", relativeFiles)
+
+	absoluteFiles := mr.Map(relativeFiles, func(in string, _index int) string {
+		return normalizePath(filepath.Join(gitDir, in))
+	})
+
+	slog.Debug("Loaded list of staged files in git (absolute)", "files", absoluteFiles)
 
 	// If there are no files avoid executing any lint-staged logic
-	if len(files) == 0 {
+	if len(absoluteFiles) == 0 {
 		if !options.Quiet {
 			ctx.output = append(ctx.output, NO_STAGED_FILES)
 		}
@@ -70,10 +71,10 @@ func runAll(options *Options) (*State, error) {
 
 	if len(foundConfigs) == 0 {
 		ctx.errors.Add(ErrConfigNotFound)
-		return ctx, ee.New("no configuration found") // TODO ErrCode ConfigNotFoundError
+		return ctx, ee.New("no configuration found")
 	}
 
-	filesByConfig := groupFilesByConfig(foundConfigs, files)
+	filesByConfig := groupFilesByConfig(foundConfigs, absoluteFiles)
 	if debug() {
 		usedConfigsCount := len(filesByConfig)
 		debugFilesByConfig := make(map[string][]string, len(filesByConfig))
@@ -85,7 +86,18 @@ func runAll(options *Options) (*State, error) {
 		slog.Debug("Grouped staged files by config", "count", usedConfigsCount, "filesByConfig", debugFilesByConfig)
 	}
 
-	gw := newGitWorkflow(gitDir, gitConfigDir, slog.Default())
+	chunkedFilenamesArray := chunkFiles(relativeFiles, defaultMaxArgLength())
+	slog.Debug("Get chunked filenames arrays", "groupCount", len(chunkedFilenamesArray), "arrays", chunkedFilenamesArray)
+
+	gw := &gitWorkflow{
+		root:                  gitDir,
+		gitConfigDir:          gitConfigDir,
+		chunkedFilenamesArray: chunkedFilenamesArray,
+		allowEmpty:            options.AllowEmpty,
+		diff:                  options.Diff,
+		diffFilter:            options.DiffFilter,
+		logger:                slog.Default(), // TODO
+	}
 
 	handleInternalError := func(result *tl.Result) {
 		if result.Error {
@@ -138,9 +150,18 @@ func runAll(options *Options) (*State, error) {
 		{
 			Title: "Applying modifications from tasks...",
 			Run: func(callback tl.TaskCallback) error {
-				//  TODO skip: applyModificationsSkipped,
+				if ctx.shouldBackup { // Always apply back unstaged modifications when skipping backup
+					if ctx.internalError {
+						callback.Skip("internal error")
+						return nil
+					}
+					if ctx.taskError {
+						callback.Skip("task error")
+						return nil
+					}
+				}
 
-				return nil // TODO git.applyModifications(ctx),
+				return gw.applyModifications(ctx)
 			},
 			PostRun: handleInternalError,
 		},
