@@ -115,6 +115,14 @@ func init() {
 						Title: "task5",
 						Run: func(callback tl.TaskCallback) error {
 							time.Sleep(1 * time.Second)
+							callback.AddSubTaskList(tl.NewTaskList(nil))
+							return nil
+						},
+					},
+					{
+						Title: "task6",
+						Run: func(callback tl.TaskCallback) error {
+							time.Sleep(1 * time.Second)
 							return nil
 						},
 					},

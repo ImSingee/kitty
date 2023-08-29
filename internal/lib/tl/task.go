@@ -259,10 +259,12 @@ func (m taskModel) View() string {
 		subListView := m.subList.View()
 		subListView = strings.TrimSpace(subListView)
 
-		for _, line := range strings.Split(subListView, "\n") {
-			b.WriteString("  ")
-			b.WriteString(line)
-			b.WriteString("\n")
+		if len(subListView) != 0 {
+			for _, line := range strings.Split(subListView, "\n") {
+				b.WriteString("  ")
+				b.WriteString(line)
+				b.WriteString("\n")
+			}
 		}
 	}
 
