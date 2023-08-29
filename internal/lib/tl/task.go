@@ -8,11 +8,11 @@ import (
 )
 
 type Task struct {
-	Title string
-	Run   func(callback TaskCallback) error
+	Title  string
+	Run    func(callback TaskCallback) error
+	Enable func() bool
 
 	Options []OptionApplier
-	Hide    bool // hide task if it's skipped
 
 	id string
 	option
@@ -42,6 +42,10 @@ func (t *Task) use() {
 }
 
 func (t *Task) start(p *tea.Program) (iAmError bool) {
+	if !t.shouldEnable() {
+		return false
+	}
+
 	p.Send(&eventTaskStart{
 		Id: t.id,
 	})
@@ -122,13 +126,21 @@ func (t *Task) skip(p *tea.Program) {
 }
 
 type taskModel struct {
-	id         string
-	title      string
-	status     taskStatus
-	skipReason string
-	//hide  bool // TODO
+	id          string
+	title       string
+	status      taskStatus
+	skipReason  string
+	enable      bool
+	hide        bool
 	errorReason string
 	subList     tea.Model
+}
+
+func (t *Task) shouldEnable() bool {
+	if t.Enable == nil {
+		return true
+	}
+	return t.Enable()
 }
 
 type taskStatus uint8
@@ -146,9 +158,9 @@ func (t *Task) createModel() taskModel {
 		id:     t.id,
 		title:  t.Title,
 		status: taskStatusPending,
+		enable: t.shouldEnable(),
+		hide:   false, // TODO
 	}
-
-	// TODO hide
 
 	return m
 }
@@ -163,6 +175,7 @@ func (m taskModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch v := msg.(type) {
 	case *eventTaskStart:
 		if m.id == v.Id {
+			m.enable = true
 			m.status = taskStatusRunning
 			return m, nil
 		}
@@ -202,6 +215,10 @@ func (m taskModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m taskModel) View() string {
+	if !m.enable || m.hide {
+		return ""
+	}
+
 	b := strings.Builder{}
 
 	icon := "○"

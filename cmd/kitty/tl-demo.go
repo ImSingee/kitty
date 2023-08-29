@@ -8,6 +8,8 @@ import (
 )
 
 func init() {
+	enableSubSub4 := false
+
 	extensions = append(extensions,
 		&cobra.Command{
 			Use:    "tl",
@@ -51,10 +53,13 @@ func init() {
 									callback.AddSubTaskList(tl.NewTaskList(
 										[]*tl.Task{
 											{
-												Title: "subsub1",
+												Title: "subsub1 (disabled)",
 												Run: func(callback tl.TaskCallback) error {
-													time.Sleep(1 * time.Second)
+													time.Sleep(1 * time.Minute)
 													return nil
+												},
+												Enable: func() bool {
+													return false
 												},
 											},
 											{
@@ -62,6 +67,28 @@ func init() {
 												Run: func(callback tl.TaskCallback) error {
 													time.Sleep(1 * time.Second)
 													return nil
+												},
+											},
+											{
+												Title: "subsub3",
+												Run: func(callback tl.TaskCallback) error {
+													time.Sleep(1 * time.Second)
+													return nil
+												},
+											},
+											{
+												Title: "subsub4 (disabled first, then enable)",
+												Run: func(callback tl.TaskCallback) error {
+													time.Sleep(1 * time.Second)
+													return nil
+												},
+												Enable: func() bool {
+													if !enableSubSub4 {
+														enableSubSub4 = true
+														return false
+													}
+
+													return true
 												},
 											},
 										},
