@@ -5,6 +5,7 @@ import (
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/kitty/internal/lib/git"
 	"github.com/spf13/cobra"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -18,6 +19,9 @@ const help = `Usage:
   kitty uninstall
   kitty set|add <hook-name> <cmd>
 `
+
+var debug bool
+var extensions []*cobra.Command
 
 func main() {
 	app := &cobra.Command{
@@ -58,6 +62,26 @@ func main() {
 			},
 		},
 	)
+
+	app.AddCommand(extensions...)
+
+	app.PersistentFlags().StringP("root", "R", "", "change command working directory")
+	app.PersistentFlags().BoolVar(&debug, "debug", false, "print additional debug information")
+	app.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		if debug {
+			slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})))
+		}
+
+		if root, _ := app.PersistentFlags().GetString("root"); root != "" {
+			slog.Debug("Change working directory", "root", root)
+			err := os.Chdir(root)
+			if err != nil {
+				return ee.Wrapf(err, "cannot change working directory to %s", root)
+			}
+		}
+
+		return nil
+	}
 
 	err := app.Execute()
 	if err != nil {

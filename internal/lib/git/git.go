@@ -25,8 +25,10 @@ func (r *Result) Err() error {
 	return nil
 }
 
-func run(args ...string) *Result {
-	output, err := exec.Command("git", args...).Output()
+func run(dir string, args ...string) *Result {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	output, err := cmd.Output()
 
 	result := &Result{
 		Output: output,
@@ -46,6 +48,10 @@ func run(args ...string) *Result {
 	return result
 }
 
+func R(wd string, args []string) *Result {
+	return run(wd, args...)
+}
+
 func Run(args ...string) *Result {
-	return run(args...)
+	return run("", args...)
 }
