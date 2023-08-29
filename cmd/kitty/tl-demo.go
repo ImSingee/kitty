@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/ImSingee/kitty/internal/lib/tl"
 	"github.com/spf13/cobra"
+	"os"
+	"os/signal"
 	"time"
 )
 
@@ -63,10 +65,16 @@ func init() {
 												},
 											},
 											{
-												Title: "subsub2",
+												Title: "subsub2 (wait until ctrl+c)",
 												Run: func(callback tl.TaskCallback) error {
-													time.Sleep(1 * time.Second)
+													signalCh := make(chan os.Signal, 1)
+													signal.Notify(signalCh, os.Interrupt)
+
+													<-signalCh
 													return nil
+												},
+												Enable: func() bool {
+													return false
 												},
 											},
 											{

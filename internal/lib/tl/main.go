@@ -20,7 +20,7 @@ func New(tasks []*Task, options ...OptionApplier) *Runner {
 
 func (runner *Runner) Run() error {
 	runner.prepare()
-	p := tea.NewProgram(runner.createModel())
+	p := tea.NewProgram(runner.createModel(), tea.WithoutSignals(), tea.WithInput(nil))
 
 	go func() {
 		runner.start(p)
@@ -71,9 +71,9 @@ func (m runnerModel) Init() tea.Cmd {
 	return nil
 }
 func (m runnerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if shouldQuit(msg) {
-		return m, tea.Quit
-	}
+	//if shouldQuit(msg) {
+	//	return m, tea.Quit
+	//}
 
 	tl, cmd := m.tl.Update(msg)
 	m.tl = tl
