@@ -90,12 +90,15 @@ func runAll(options *Options) (*State, error) {
 				return gw.prepare(ctx)
 			},
 		},
-		newTaskIf(false, &tl.Task{
+		{
 			Title: "Hiding unstaged changes to partially staged files...",
 			Run: func(callback tl.TaskCallback) error {
 				return nil // TODO git.hideUnstagedChanges(ctx),
 			},
-		}),
+			Enable: func() bool {
+				return ctx.hasPartiallyStagedFiles
+			},
+		},
 		{
 			Title: "Running tasks for staged files...",
 			Run: func(callback tl.TaskCallback) error {
@@ -118,26 +121,39 @@ func runAll(options *Options) (*State, error) {
 				return nil // TODO git.applyModifications(ctx),
 			},
 		},
-		newTaskIf(false, &tl.Task{
+		{
 			Title: "Restoring unstaged changes to partially staged files...",
 			Run: func(callback tl.TaskCallback) error {
 				//  skip: restoreUnstagedChangesSkipped,
 
 				return nil // TODO git.restoreUnstagedChanges(ctx),
 			},
-		}),
-		// {
-		//	        title: 'Reverting to original state because of errors...',
-		//	        task: (ctx) => git.restoreOriginalState(ctx),
-		//	        enabled: restoreOriginalStateEnabled,
-		//	        skip: restoreOriginalStateSkipped,
-		//	      },
-		//	      {
-		//	        title: 'Cleaning up temporary files...',
-		//	        task: (ctx) => git.cleanup(ctx),
-		//	        enabled: cleanupEnabled,
-		//	        skip: cleanupSkipped,
-		//	      },
+			Enable: func() bool {
+				return ctx.hasPartiallyStagedFiles
+			},
+		},
+		{
+			Title: "Reverting to original state because of errors...",
+			Run: func(callback tl.TaskCallback) error {
+				//  skip: restoreOriginalStateSkipped
+
+				return nil
+			},
+			Enable: func() bool {
+				return false // restoreOriginalStateEnabled
+			},
+		},
+		{
+			Title: "Cleaning up temporary files...",
+			Run: func(callback tl.TaskCallback) error {
+				//  skip: cleanupSkipped
+
+				return nil // TODO git.cleanup(ctx),
+			},
+			Enable: func() bool {
+				return false // cleanupEnabled
+			},
+		},
 	}
 
 	tasks = mr.Filter(tasks, func(task *tl.Task, _ int) bool { return task != nil })
@@ -282,34 +298,10 @@ func runAll(options *Options) (*State, error) {
 	  }
 
 
-	  // If all of the configured tasks should be skipped
-	  // avoid executing any lint-staged logic
-	  if (listrTasks.every((task) => task.skip())) {
-	    if (!quiet) ctx.output.push(NO_TASKS)
-	    return ctx
-	  }
-
-
-	  const git = new GitWorkflow({
-	    allowEmpty,
-	    gitConfigDir,
-	    gitDir,
-	    matchedFileChunks,
-	    diff,
-	    diffFilter,
-	  })
 
 	*/
 
 	err = runner.Run()
 
 	return ctx, err
-}
-
-func newTaskIf(enabled bool, task *tl.Task) *tl.Task {
-	if !enabled {
-		return nil
-	}
-
-	return task
 }
