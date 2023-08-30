@@ -144,12 +144,14 @@ func loadConfig(file string) (*Config, error) {
 		return nil, err
 	}
 
+	files := in["files"].Map()
+
 	config := &Config{
 		Path:  file,
-		Rules: make([]*Rule, 0, len(in)),
+		Rules: make([]*Rule, 0, len(files)),
 	}
 
-	for k, v := range in {
+	for k, v := range files {
 		vv, err := parseConfigRuleEntry(k, v)
 		if err != nil {
 			return nil, err
@@ -157,18 +159,30 @@ func loadConfig(file string) (*Config, error) {
 		config.Rules = append(config.Rules, vv)
 	}
 
-	// FIXME only sort temp (future maybe gson can match order with json)
+	sort.Slice(config.Rules, func(i, j int) bool {
+		return strings.Compare(config.Rules[i].Glob, config.Rules[j].Glob) < 0
+	})
 
 	return config, err
 
 }
 
+// jsonLoad loads json file and convert it to map[string]gson.JSON
+//
+// the returned map always contains a "files" key with type map[string]any
 func jsonLoad(data []byte) (map[string]gson.JSON, error) {
 	in := map[string]any{}
 
 	err := json.Unmarshal(data, &in)
 	if err != nil {
 		return nil, err
+	}
+
+	_, containsValidFilesKey := in["files"].(map[string]any)
+	if !containsValidFilesKey {
+		in = map[string]any{
+			"files": in,
+		}
 	}
 
 	return gson.New(in).Map(), nil
