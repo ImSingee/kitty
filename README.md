@@ -6,9 +6,14 @@ Kitty improves your commits!
 
 ## Install
 
-> Currently, kitty is only available for manual installation.
+If you have installed [Homebrew](https://brew.sh/), run:
 
-You can visit the [release](https://github.com/ImSingee/kitty/releases) page to download the latest version.
+```shell
+brew tag ImSingee/kitty
+brew install kitty
+```
+
+Or you can visit the [release](https://github.com/ImSingee/kitty/releases) page to download the latest version. The downloaded archive contains a single executable file, you can put it the system PATH.
 
 Or you can install it from source (this requires Go1.21+):
  
