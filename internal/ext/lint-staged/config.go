@@ -8,6 +8,7 @@ import (
 	"github.com/ImSingee/go-ex/exstrings"
 	"github.com/ImSingee/go-ex/mr"
 	"github.com/ImSingee/go-ex/set"
+	"github.com/ImSingee/kitty/internal/config"
 	"github.com/ysmood/gson"
 	"io/fs"
 	"log/slog"
@@ -49,6 +50,9 @@ func searchConfigs(cwd, gitDir, configPath string, configObject *Config) ([]*Con
 		config, err := loadConfig(configPath)
 		if err != nil {
 			return nil, err
+		}
+		if config == nil {
+			return nil, errors.New("cannot load configuration")
 		}
 		config.Path = configPath
 
@@ -121,27 +125,23 @@ func searchConfigs(cwd, gitDir, configPath string, configObject *Config) ([]*Con
 	return configs, nil
 }
 
-var validConfigNames = []string{
-	//TODO KITTY_CONFIG_FILES
+var validConfigNames = append(config.ConfigFileNames,
 	".lintstagedrc",
 	".lintstagedrc.json",
-	".lintstagedrc.yaml",
-	".lintstagedrc.yml",
+	// TODO yaml config files
 	// TODO js config files
-}
+)
 
+// loadConfig read and parse config file
+//
+// it may return (nil, nil) when the config can be ignored
 func loadConfig(file string) (*Config, error) {
-	// TODO support yaml
-	// TODO support js
-
-	content, err := os.ReadFile(file)
-	if err != nil {
-		return nil, ee.Wrap(err, "cannot read config file")
-	}
-
-	in, err := jsonLoad(content)
+	in, err := configLoad(file)
 	if err != nil {
 		return nil, err
+	}
+	if in == nil {
+		return nil, nil
 	}
 
 	files := in["files"].Map()
@@ -167,6 +167,49 @@ func loadConfig(file string) (*Config, error) {
 
 }
 
+// configLoad loads config file and convert it to gson.JSON
+//
+// the returned map may be nil if it contains no config and no parse error
+// and if it's not nil, it always contains a "files" key with type map[string]any
+func configLoad(filename string) (map[string]gson.JSON, error) {
+	name := filepath.Base(filename)
+	if exstrings.InStringList(config.ConfigFileNames, name) { // kitty config
+		return kittyConfigLoad(filename)
+	}
+
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, ee.Wrap(err, "cannot read config file")
+	}
+
+	if strings.HasSuffix(name, "rc") || strings.HasSuffix(name, ".json") {
+		return jsonLoad(content)
+	}
+
+	// // TODO support yaml
+	//	// TODO support js
+
+	return nil, ee.Errorf("unsupported config filename: %s", name)
+}
+
+// kittyConfigLoad loads kitty config file and extract the `lint-staged` key to map[string]gson.JSON
+//
+// the returned map may be nil if it doesn't contain the `lint-staged` key
+// and if it's not nil, the returned map always contains a "files" key with type map[string]any
+func kittyConfigLoad(filename string) (map[string]gson.JSON, error) {
+	kc, err := config.ReadKittyConfig(filename)
+	if err != nil {
+		return nil, ee.Wrap(err, "cannot read kitty config file")
+	}
+
+	ls, ok := kc["lint-staged"]
+	if !ok {
+		return nil, nil
+	}
+
+	return loadConfigJSON(ls.Map())
+}
+
 // jsonLoad loads json file and convert it to map[string]gson.JSON
 //
 // the returned map always contains a "files" key with type map[string]any
@@ -178,14 +221,22 @@ func jsonLoad(data []byte) (map[string]gson.JSON, error) {
 		return nil, err
 	}
 
-	_, containsValidFilesKey := in["files"].(map[string]any)
+	return loadConfigJSON(gson.New(in).Map())
+}
+
+func loadConfigJSON(m map[string]gson.JSON) (map[string]gson.JSON, error) {
+	if len(m) == 0 {
+		return nil, ee.New("empty config")
+	}
+
+	_, containsValidFilesKey := m["files"].Val().(map[string]any)
 	if !containsValidFilesKey {
-		in = map[string]any{
-			"files": in,
+		m = map[string]gson.JSON{
+			"files": gson.New(m),
 		}
 	}
 
-	return gson.New(in).Map(), nil
+	return m, nil
 }
 
 func numberOfLevels(p string) int {

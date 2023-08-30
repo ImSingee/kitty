@@ -36,6 +36,15 @@ git commit -m "Keep calm and commit"
 
 ## Config
 
+There's no kitty configurations at the moment. But some extensions may need configurations, and it can be configured in kitty configuration file(s).
+
+The configuration file will be read from the following locations:
+- `.kittyrc`
+- `.kittyrc.json`
+- `kitty.config.json`
+
+In most cases, the configuration file should be placed inside the root directory of your project. But in some cases, you can place the config file inside the subdirectory of the project to override some configs.
+
 ## Extension: lint-staged
 
 kitty ships extension `lint-staged` to allow you to run commands on staged files.
@@ -60,6 +69,8 @@ kitty lint-staged
 - `lint-staged` object in your kitty config
 - `.lintstagedrc` or `.lintstagedrc.json` file (in JSON format)
 - `lint-staged.config.js` or `.lintstagedrc.js` file (Comping Soon)
+
+> If a configuration file exists but not added to git, it will be ignored.
 
 You can also place multiple configuration files in different directories inside a project. For a given staged file, the closest configuration file will always be used. But you can't have multiple configuration files in the same directory.
 
