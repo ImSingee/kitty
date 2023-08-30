@@ -1,9 +1,11 @@
 package lintstaged
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/ImSingee/go-ex/ee"
+	"github.com/ImSingee/go-ex/exbytes"
 	"github.com/ImSingee/go-ex/glob"
 	"github.com/ImSingee/go-ex/mr"
 	"github.com/ImSingee/kitty/internal/lib/shells"
@@ -15,6 +17,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 )
 
 func runAll(options *Options) (*State, error) {
@@ -253,6 +256,8 @@ func runAll(options *Options) (*State, error) {
 	runner := tl.New(tasks, tl.WithExitOnError(true))
 	err = runner.Run()
 
+	printTaskResults(ctx.taskResults, options)
+
 	return ctx, err
 }
 
@@ -357,7 +362,7 @@ func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string, opti
 	}
 }
 
-func generateTaskForCommand(ctx *State, wd string, cmd *Command, onFiles []string, options *Options) *tl.Task {
+func generateTaskForCommand(state *State, wd string, cmd *Command, onFiles []string, options *Options) *tl.Task {
 	return &tl.Task{
 		Title: cmd.Command + fmt.Sprintf(" - %d files", len(onFiles)),
 		Run: func(callback tl.TaskCallback) (err error) {
@@ -373,8 +378,6 @@ func generateTaskForCommand(ctx *State, wd string, cmd *Command, onFiles []strin
 			p := exec.Command(shell, "-c", args)
 			p.Dir = wd
 
-			// TODO collect stdout/stderr and show if error or verbose
-
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer stop()
 
@@ -386,7 +389,61 @@ func generateTaskForCommand(ctx *State, wd string, cmd *Command, onFiles []strin
 				}
 			}()
 
-			return p.Run()
+			output, err := p.CombinedOutput()
+
+			result := &TaskResult{
+				cmd:                cmd,
+				fullCommandAndArgs: args,
+				output:             output,
+				err:                err,
+			}
+			state.taskResults.Store(callback.GetTask().Id(), result)
+
+			return err
 		},
+	}
+}
+
+func printTaskResults(results *sync.Map, options *Options) {
+	anyResult := false
+	results.Range(func(key, value any) bool {
+		result := value.(*TaskResult)
+
+		success := result.err == nil
+
+		if success && !options.Verbose {
+			return true
+		}
+
+		if !anyResult { // first print
+			fmt.Println()
+			anyResult = true
+		}
+
+		icon := "✖"
+		if success {
+			icon = "✔"
+		}
+
+		cmd := result.cmd.Command
+
+		output := exbytes.ToString(bytes.TrimSpace(result.output))
+		output = strings.ToValidUTF8(output, "\uFFFD")
+
+		if len(output) == 0 {
+			if success {
+				fmt.Printf("%s %s success without output.\n", icon, cmd)
+			} else {
+				fmt.Printf("%s %s failed without output. (%v)\n", icon, cmd, result.err)
+			}
+		} else {
+			fmt.Printf("%s %s:\n%s\n", icon, cmd, output)
+		}
+
+		return true
+	})
+
+	if anyResult {
+		fmt.Println()
 	}
 }

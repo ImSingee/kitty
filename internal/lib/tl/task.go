@@ -29,6 +29,11 @@ func NewTask(title string, run func(callback TaskCallback) error, options ...Opt
 	}
 }
 
+// Id only available after run
+func (t *Task) Id() string {
+	return t.id
+}
+
 func (t *Task) use() {
 	if t.id != "" {
 		panic("Cannot use the same task more than once")
@@ -338,6 +343,10 @@ type taskController struct {
 	skipReason string
 	hide       bool
 	subList    *TaskList
+}
+
+func (c *taskController) GetTask() *Task {
+	return c.task
 }
 
 //func (c *taskController) Log(msg string) {
