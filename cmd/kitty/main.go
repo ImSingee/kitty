@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/ImSingee/go-ex/ee"
+	"github.com/ImSingee/go-ex/pp"
 	"github.com/ImSingee/kitty/internal/lib/git"
 	"github.com/spf13/cobra"
 	"log/slog"
@@ -17,7 +18,8 @@ import (
 const help = `Usage:
   kitty install
   kitty uninstall
-  kitty set|add <hook-name> <cmd>
+  kitty add <hook-name> <cmd>
+  kitty @extension ...
 `
 
 var debug bool
@@ -25,7 +27,7 @@ var extensions []*cobra.Command
 
 func main() {
 	app := &cobra.Command{
-		Use:           "kitty",
+		Use:           "kitty [@extension]",
 		Long:          help,
 		Version:       getVersionString(),
 		SilenceUsage:  true,
@@ -62,10 +64,20 @@ func main() {
 				return addHook(args[0], args[1])
 			},
 		},
+		&cobra.Command{
+			Use:    "@extension",
+			Hidden: true,
+			RunE: func(cmd *cobra.Command, args []string) error {
+				pp.Println("`@extension` is not a real command.\nIt just means you can use `kitty @xxx` to run some extension.\nFor example, if you want to run `lint-staged` extension, run `kitty @lint-staged`.")
+
+				return nil
+			},
+		},
 	)
 
 	app.AddCommand(extensions...)
 
+	// for global flags
 	app.PersistentFlags().StringP("root", "R", "", "change command working directory")
 	app.PersistentFlags().BoolVar(&debug, "debug", false, "print additional debug information")
 	app.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
@@ -84,6 +96,22 @@ func main() {
 		return nil
 	}
 
+	// for extension
+	app.TraverseChildren = true
+	app.Flags().SetInterspersed(false)
+	app.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 || len(args[0]) <= 1 || !strings.HasPrefix(args[0], "@") {
+			return cmd.Help()
+		}
+
+		extensionName := args[0][1:]
+		//extensionArgs := args[1:]
+		// TODO real run extensions
+
+		return ee.Errorf("unknown extension `%s`", extensionName)
+	}
+
+	// run!
 	err := app.Execute()
 	if err != nil {
 		l("Error: %v", err)
