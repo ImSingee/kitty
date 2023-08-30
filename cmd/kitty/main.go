@@ -27,7 +27,7 @@ func main() {
 	app := &cobra.Command{
 		Use:           "kitty",
 		Long:          help,
-		Version:       "",
+		Version:       getVersionString(),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}

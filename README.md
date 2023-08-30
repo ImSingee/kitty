@@ -7,6 +7,10 @@ Kitty improves your commits!
 ## Install
 
 > Currently, kitty is only available for manual installation.
+
+You can visit the [release](https://github.com/ImSingee/kitty/releases) page to download the latest version.
+
+Or you can install it from source (this requires Go1.21+):
  
 ```shell
 go install github.com/ImSingee/kitty@latest

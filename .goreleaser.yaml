@@ -9,17 +9,18 @@ builds:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.buildAt={{.Date}}
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-    # use zip for windows archives
+      {{ .ProjectName }}-{{ .Version }}-{{ .Os }}.{{ .Arch }}
     format_overrides:
       - goos: windows
         format: zip
@@ -33,7 +34,18 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-
+      - '^ci:'
+      - '^test:'
+brews:
+  - name: kitty
+    repository:
+      owner: ImSingee
+      name: homebrew-kitty
+      token: "{{ .Env.HOMEBREW_RELEASE_GITHUB_TOKEN }}"
+    install: |
+      bin.install "kitty"
+    test: |
+      system "#{bin}/foo --version"
 
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 # vim: set ts=2 sw=2 tw=0 fo=cnqoj
