@@ -17,7 +17,7 @@ func init() {
 
 	cmd := &cobra.Command{
 		Use:     "lint-staged",
-		Aliases: []string{"lint"},
+		Aliases: []string{"lint", "@lint-staged"},
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if diff != "" {

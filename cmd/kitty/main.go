@@ -48,8 +48,9 @@ func main() {
 			},
 		},
 		&cobra.Command{
-			Use:  "set <hook> <cmd>",
-			Args: cobra.ExactArgs(2),
+			Use:    "set <hook> <cmd>",
+			Hidden: true,
+			Args:   cobra.ExactArgs(2),
 			RunE: func(cmd *cobra.Command, args []string) error {
 				return set(args[0], args[1])
 			},
@@ -58,7 +59,7 @@ func main() {
 			Use:  "add <hook> <cmd>",
 			Args: cobra.ExactArgs(2),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return add(args[0], args[1])
+				return addHook(args[0], args[1])
 			},
 		},
 	)
@@ -202,6 +203,32 @@ You will have to commit the file to have git keep track of the executable bit.`)
 	}
 
 	return nil
+}
+
+func checkEnv() error {
+	if _, err := os.Stat(".git"); err != nil {
+		return fmt.Errorf("this command must be run from the root of a git repository")
+	}
+	if _, err := os.Stat(".kitty"); err != nil {
+		return fmt.Errorf("cannot found .kitty directory, please run 'kitty install' first")
+	}
+
+	return nil
+}
+
+func addHook(name string, cmd string) error {
+	if err := checkEnv(); err != nil {
+		return err
+	}
+
+	fileName := filepath.Join(".kitty", name)
+
+	if strings.HasPrefix(cmd, "@") {
+		// use kitty extension
+		cmd = "kitty " + cmd
+	}
+
+	return add(fileName, cmd)
 }
 
 // Create a hook if it doesn't exist or append command to it
