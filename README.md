@@ -157,6 +157,7 @@ We are working on it, but it's not an urgent task. If you really need it, PR is 
 
 - [husky](https://github.com/typicode/husky/tree/main)
 - [lint-staged](https://github.com/okonet/lint-staged)
+- [go-gitignore](https://github.com/sabhiram/go-gitignore)
 
 ## License
 
