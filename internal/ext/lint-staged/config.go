@@ -28,7 +28,8 @@ type Rule struct {
 }
 
 type Command struct {
-	Command string
+	Command  string
+	Absolute bool
 }
 
 func searchConfigs(cwd, gitDir, configPath string, configObject *Config) ([]*Config, error) {
@@ -218,10 +219,24 @@ func parseRule(v any) (*Command, error) {
 }
 
 func parseStringCommand(cmd string) (*Command, error) {
-	// TODO support more options
-	// e.g. [relative = true]
+	result := &Command{}
 
-	return &Command{Command: cmd}, nil
+	if !strings.HasPrefix(cmd, "[") { // no options
+		return &Command{Command: cmd}, nil
+	}
+
+	if strings.HasPrefix(cmd, "[absolute]") {
+		result.Absolute = true
+		cmd = strings.TrimPrefix(cmd, "[absolute]")
+	}
+
+	if strings.HasPrefix(cmd, "[") || strings.HasPrefix(cmd, " [") {
+		return nil, fmt.Errorf("command `%s` contains unknown options", cmd)
+	}
+
+	result.Command = strings.TrimSpace(cmd)
+
+	return result, nil
 }
 
 // groupFilesByConfig map file to specific (deepest level) config

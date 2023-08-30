@@ -94,7 +94,7 @@ your-cmd file1.ext file2.ext
 
 > *NOTE*
 > Apart from node.js `lint-staged`, we do not pass absolute paths to the commands. Instead, we pass the relative path to the working directory (where lint-staged config is placed) to the command.
-> If you want we pass absolute paths to the commands, you can prepend `[absolute] ` before the command.
+> If you want we pass absolute paths to the commands, you can prepend `[absolute] ` (note: space is required) before the command.
 > 
 > Example:
 > ```json

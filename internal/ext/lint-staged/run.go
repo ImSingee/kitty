@@ -372,8 +372,17 @@ func generateTaskForCommand(state *State, wd string, cmd *Command, onFiles []str
 			}
 
 			shell := options.Shell
-			extraArgs := shells.Join(onFiles) // TODO relative
-			args := strings.TrimSpace(cmd.Command) + " " + extraArgs
+
+			fileArgs := ""
+			if cmd.Absolute {
+				fileArgs = shells.Join(onFiles)
+			} else {
+				fileArgs = shells.Join(mr.Map(onFiles, func(f string, index int) string {
+					return strings.TrimPrefix(f, wd+string(filepath.Separator))
+				}))
+			}
+
+			args := cmd.Command + " " + fileArgs
 
 			p := exec.Command(shell, "-c", args)
 			p.Dir = wd
