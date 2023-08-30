@@ -4,7 +4,10 @@ go 1.20
 
 require (
 	github.com/ImSingee/go-ex v0.4.41
+	github.com/ImSingee/tt v1.0.4
+	github.com/alessio/shellescape v1.4.2
 	github.com/charmbracelet/bubbletea v0.24.2
+	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.3.1
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4

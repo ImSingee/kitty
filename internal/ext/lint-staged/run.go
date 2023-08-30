@@ -1,13 +1,17 @@
 package lintstaged
 
 import (
+	"context"
 	"fmt"
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/glob"
 	"github.com/ImSingee/go-ex/mr"
+	"github.com/ImSingee/kitty/internal/lib/shells"
 	"github.com/ImSingee/kitty/internal/lib/tl"
 	"log/slog"
 	"os"
+	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -247,102 +251,6 @@ func runAll(options *Options) (*State, error) {
 	}
 
 	runner := tl.New(tasks, tl.WithExitOnError(true))
-
-	/*
-
-
-	  const listrTasks = []
-
-	  // Set of all staged files that matched a task glob. Values in a set are unique.
-	  const matchedFiles = new Set()
-
-	  for (const [configPath, { config, files }] of Object.entries(filesByConfig)) {
-	    const configName = configPath ? normalizePath(path.relative(cwd, configPath)) : 'Config object'
-
-	    const stagedFileChunks = chunkFiles({ baseDir: gitDir, files, maxArgLength, relative })
-
-	    // Use actual cwd if it's specified, or there's only a single config file.
-	    // Otherwise use the directory of the config file for each config group,
-	    // to make sure tasks are separated from each other.
-	    const groupCwd = hasMultipleConfigs && !hasExplicitCwd ? path.dirname(configPath) : cwd
-
-	    const chunkCount = stagedFileChunks.length
-	    if (chunkCount > 1) {
-	      debugLog('Chunked staged files from `%s` into %d part', configPath, chunkCount)
-	    }
-
-	    for (const [index, files] of stagedFileChunks.entries()) {
-	      const chunkListrTasks = await Promise.all(
-	        generateTasks({ config, cwd: groupCwd, files, relative }).map((task) =>
-	          makeCmdTasks({
-	            commands: task.commands,
-	            cwd: groupCwd,
-	            files: task.fileList,
-	            gitDir,
-	            shell,
-	            verbose,
-	          }).then((subTasks) => {
-	            // Add files from task to match set
-	            task.fileList.forEach((file) => {
-	              // Make sure relative files are normalized to the
-	              // group cwd, because other there might be identical
-	              // relative filenames in the entire set.
-	              const normalizedFile = path.isAbsolute(file)
-	                ? file
-	                : normalizePath(path.join(groupCwd, file))
-
-	              matchedFiles.add(normalizedFile)
-	            })
-
-	            hasDeprecatedGitAdd =
-	              hasDeprecatedGitAdd || subTasks.some((subTask) => subTask.command === 'git add')
-
-	            const fileCount = task.fileList.length
-
-	            return {
-	              title: `${task.pattern}${chalk.dim(
-	                ` — ${fileCount} ${fileCount === 1 ? 'file' : 'files'}`
-	              )}`,
-	              task: async (ctx, task) =>
-	                task.newListr(
-	                  subTasks,
-	                  // Subtasks should not run in parallel, and should exit on error
-	                  { concurrent: false, exitOnError: true }
-	                ),
-	              skip: () => {
-	                // Skip task when no files matched
-	                if (fileCount === 0) {
-	                  return `${task.pattern}${chalk.dim(' — no files')}`
-	                }
-	                return false
-	              },
-	            }
-	          })
-	        )
-	      )
-
-	      listrTasks.push({
-	        title:
-	          `${configName}${chalk.dim(` — ${files.length} ${files.length > 1 ? 'files' : 'file'}`)}` +
-	          (chunkCount > 1 ? chalk.dim(` (chunk ${index + 1}/${chunkCount})...`) : ''),
-	        task: (ctx, task) => task.newListr(chunkListrTasks, { concurrent, exitOnError: true }),
-	        skip: () => {
-	          // Skip if the first step (backup) failed
-	          if (ctx.errors.has(GitError)) return SKIPPED_GIT_ERROR
-	          // Skip chunk when no every task is skipped (due to no matches)
-	          if (chunkListrTasks.every((task) => task.skip())) {
-	            return `${configName}${chalk.dim(' — no tasks to run')}`
-	          }
-	          return false
-	        },
-	      })
-	    }
-	  }
-
-
-
-	*/
-
 	err = runner.Run()
 
 	return ctx, err
@@ -447,13 +355,35 @@ func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string) *tl.
 func generateTaskForCommand(ctx *State, wd string, cmd *Command, onFiles []string) *tl.Task {
 	return &tl.Task{
 		Title: cmd.Command,
-		Run: func(callback tl.TaskCallback) error {
+		Run: func(callback tl.TaskCallback) (err error) {
+			//defer func() {
+			//	if err == nil {
+			//		callback.Hide()
+			//	}
+			//}()
 
-			// TODO allow ctrl+c to cancel
+			shell := os.Getenv("SHELL")
+			if shell == "" {
+				shell = "sh"
+			}
 
-			// TODO run command
+			extraArgs := shells.Join(onFiles)
+			args := strings.TrimSpace(cmd.Command) + " " + extraArgs
 
-			return nil
+			p := exec.Command(shell, "-c", args)
+
+			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+			defer stop()
+
+			go func() {
+				<-ctx.Done()
+
+				if process := p.Process; process != nil {
+					_ = process.Kill()
+				}
+			}()
+
+			return p.Run()
 		},
 	}
 }
