@@ -374,7 +374,9 @@ func generateTaskForCommand(state *State, wd string, cmd *Command, onFiles []str
 			shell := options.Shell
 
 			fileArgs := ""
-			if cmd.Absolute {
+			if cmd.NoArgs {
+				// do nothing
+			} else if cmd.Absolute {
 				fileArgs = shells.Join(onFiles)
 			} else {
 				fileArgs = shells.Join(mr.Map(onFiles, func(f string, index int) string {

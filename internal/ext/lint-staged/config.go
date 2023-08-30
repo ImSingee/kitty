@@ -30,6 +30,7 @@ type Rule struct {
 type Command struct {
 	Command  string
 	Absolute bool
+	NoArgs   bool
 }
 
 func searchConfigs(cwd, gitDir, configPath string, configObject *Config) ([]*Config, error) {
@@ -221,17 +222,32 @@ func parseRule(v any) (*Command, error) {
 func parseStringCommand(cmd string) (*Command, error) {
 	result := &Command{}
 
+	cmdIn := cmd // backup for error message
+
 	if !strings.HasPrefix(cmd, "[") { // no options
 		return &Command{Command: cmd}, nil
 	}
 
-	if strings.HasPrefix(cmd, "[absolute]") {
-		result.Absolute = true
-		cmd = strings.TrimPrefix(cmd, "[absolute]")
+loop:
+	for {
+		switch {
+		case strings.HasPrefix(cmd, "[absolute]"):
+			result.Absolute = true
+			cmd = strings.TrimPrefix(cmd, "[absolute]")
+		case strings.HasPrefix(cmd, "[noArgs]"):
+			result.NoArgs = true
+			cmd = strings.TrimPrefix(cmd, "[noArgs]")
+		default:
+			break loop
+		}
 	}
 
 	if strings.HasPrefix(cmd, "[") || strings.HasPrefix(cmd, " [") {
-		return nil, fmt.Errorf("command `%s` contains unknown options", cmd)
+		return nil, fmt.Errorf("command `%s` contains unknown options", cmdIn)
+	}
+
+	if result.Absolute && result.NoArgs {
+		return nil, fmt.Errorf("command `%s` cannot have both [absolute] and [noArgs] options", cmdIn)
 	}
 
 	result.Command = strings.TrimSpace(cmd)
