@@ -349,18 +349,22 @@ func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string) *tl.
 			callback.AddSubTask(cmdTasks...)
 			return nil
 		},
+		PostRun: func(result *tl.Result) {
+			if !result.Error {
+				result.Hide = true
+			}
+		},
 	}
 }
 
 func generateTaskForCommand(ctx *State, wd string, cmd *Command, onFiles []string) *tl.Task {
 	return &tl.Task{
-		Title: cmd.Command,
+		Title: cmd.Command + fmt.Sprintf(" - %d files", len(onFiles)),
 		Run: func(callback tl.TaskCallback) (err error) {
-			//defer func() {
-			//	if err == nil {
-			//		callback.Hide()
-			//	}
-			//}()
+			if len(onFiles) == 0 {
+				callback.Skip("")
+				return nil
+			}
 
 			shell := os.Getenv("SHELL")
 			if shell == "" {
@@ -371,6 +375,7 @@ func generateTaskForCommand(ctx *State, wd string, cmd *Command, onFiles []strin
 			args := strings.TrimSpace(cmd.Command) + " " + extraArgs
 
 			p := exec.Command(shell, "-c", args)
+			p.Dir = wd
 
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer stop()
@@ -384,6 +389,11 @@ func generateTaskForCommand(ctx *State, wd string, cmd *Command, onFiles []strin
 			}()
 
 			return p.Run()
+		},
+		PostRun: func(result *tl.Result) {
+			if !result.Error {
+				result.Hide = true
+			}
 		},
 	}
 }
