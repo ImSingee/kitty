@@ -12,7 +12,6 @@ func init() {
 	var diffFilter string
 	var stash bool
 	var quiet bool
-	var relative bool
 	var shell string
 	var verbose bool
 
@@ -36,7 +35,6 @@ func init() {
 				DiffFilter: diffFilter,
 				Stash:      stash,
 				Quiet:      quiet,
-				Relative:   relative,
 				Shell:      shell,
 				Verbose:    verbose,
 			}
@@ -51,9 +49,8 @@ func init() {
 	flags.StringVar(&diff, "diff", "", `override the default "--staged" flag of "git diff" to get list of files. Implies "--stash=false"`)
 	flags.StringVar(&diffFilter, "diff-filter", "", `override the default "--diff-filter=ACMR" flag of "git diff" to get list of files`)
 	flags.BoolVar(&stash, "stash", true, "enable the backup stash, and revert in case of errors")
-	flags.BoolVarP(&quiet, "quiet", "q", false, "disable lint-staged’s own console output")
-	flags.BoolVarP(&relative, "relative", "r", false, "pass relative filepaths to tasks")
-	flags.StringVarP(&shell, "shell", "x", "", "skip parsing of tasks for better shell support")
+	//flags.BoolVarP(&quiet, "quiet", "q", false, "disable lint-staged’s own console output")
+	flags.StringVarP(&shell, "shell", "x", "", "use a custom shell to execute tasks with; defaults to the shell specified in the environment variable $SHELL, or /bin/sh if not set")
 	flags.BoolVarP(&verbose, "verbose", "v", false, "show task output even when tasks succeed; by default only failed output is shown")
 
 	// TODO concurrent

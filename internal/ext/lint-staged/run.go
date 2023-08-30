@@ -126,7 +126,7 @@ func runAll(options *Options) (*State, error) {
 		}
 	}
 
-	subTasks := generateTasksToRun(ctx, filesByConfig)
+	subTasks := generateTasksToRun(ctx, filesByConfig, options)
 
 	tasks := []*tl.Task{
 		{
@@ -256,7 +256,7 @@ func runAll(options *Options) (*State, error) {
 	return ctx, err
 }
 
-func generateTasksToRun(ctx *State, config map[*Config][]string) []*tl.Task {
+func generateTasksToRun(ctx *State, config map[*Config][]string, options *Options) []*tl.Task {
 	type ConfigEntries struct {
 		Config    *Config
 		Filenames []string
@@ -266,7 +266,7 @@ func generateTasksToRun(ctx *State, config map[*Config][]string) []*tl.Task {
 	all := make([]*ConfigEntries, 0, len(config))
 
 	for config, files := range config {
-		tasks := generateTasksForConfig(ctx, config, files)
+		tasks := generateTasksForConfig(ctx, config, files, options)
 
 		all = append(all, &ConfigEntries{
 			Config:    config,
@@ -295,7 +295,7 @@ func generateTasksToRun(ctx *State, config map[*Config][]string) []*tl.Task {
 	})
 }
 
-func generateTasksForConfig(ctx *State, config *Config, files []string) []*tl.Task {
+func generateTasksForConfig(ctx *State, config *Config, files []string, options *Options) []*tl.Task {
 	type RuleConfigEntries struct {
 		Rule string
 	}
@@ -312,15 +312,15 @@ func generateTasksForConfig(ctx *State, config *Config, files []string) []*tl.Ta
 	wd := filepath.Dir(config.Path)
 
 	if len(config.Rules) == 1 {
-		return []*tl.Task{generateTaskForRule(ctx, wd, config.Rules[0], files)}
+		return []*tl.Task{generateTaskForRule(ctx, wd, config.Rules[0], files, options)}
 	}
 
 	return mr.Map(config.Rules, func(rule *Rule, index int) *tl.Task {
-		return generateTaskForRule(ctx, wd, rule, files)
+		return generateTaskForRule(ctx, wd, rule, files, options)
 	})
 }
 
-func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string) *tl.Task {
+func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string, options *Options) *tl.Task {
 	files = mr.Filter(files, func(in string, index int) bool {
 		return strings.HasPrefix(in, wd+string(filepath.Separator))
 	})
@@ -335,7 +335,7 @@ func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string) *tl.
 	}
 
 	cmdTasks := mr.Map(rule.Commands, func(cmd *Command, index int) *tl.Task {
-		return generateTaskForCommand(ctx, wd, cmd, files)
+		return generateTaskForCommand(ctx, wd, cmd, files, options)
 	})
 
 	return &tl.Task{
@@ -350,14 +350,14 @@ func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string) *tl.
 			return nil
 		},
 		PostRun: func(result *tl.Result) {
-			if !result.Error {
+			if !result.Error && !options.Verbose {
 				result.Hide = true
 			}
 		},
 	}
 }
 
-func generateTaskForCommand(ctx *State, wd string, cmd *Command, onFiles []string) *tl.Task {
+func generateTaskForCommand(ctx *State, wd string, cmd *Command, onFiles []string, options *Options) *tl.Task {
 	return &tl.Task{
 		Title: cmd.Command + fmt.Sprintf(" - %d files", len(onFiles)),
 		Run: func(callback tl.TaskCallback) (err error) {
@@ -366,16 +366,14 @@ func generateTaskForCommand(ctx *State, wd string, cmd *Command, onFiles []strin
 				return nil
 			}
 
-			shell := os.Getenv("SHELL")
-			if shell == "" {
-				shell = "sh"
-			}
-
-			extraArgs := shells.Join(onFiles)
+			shell := options.Shell
+			extraArgs := shells.Join(onFiles) // TODO relative
 			args := strings.TrimSpace(cmd.Command) + " " + extraArgs
 
 			p := exec.Command(shell, "-c", args)
 			p.Dir = wd
+
+			// TODO collect stdout/stderr and show if error or verbose
 
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer stop()
@@ -389,11 +387,6 @@ func generateTaskForCommand(ctx *State, wd string, cmd *Command, onFiles []strin
 			}()
 
 			return p.Run()
-		},
-		PostRun: func(result *tl.Result) {
-			if !result.Error {
-				result.Hide = true
-			}
 		},
 	}
 }

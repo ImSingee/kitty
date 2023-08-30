@@ -3,6 +3,7 @@ package lintstaged
 import (
 	"fmt"
 	"github.com/ImSingee/go-ex/ee"
+	"os"
 )
 
 type Options struct {
@@ -13,7 +14,6 @@ type Options struct {
 	DiffFilter string
 	Stash      bool
 	Quiet      bool
-	Relative   bool
 	Shell      string
 	Verbose    bool
 }
@@ -40,6 +40,11 @@ func Run(options *Options) error {
 func validateOptions(options *Options) error {
 	if options.Shell != "" {
 		// TODO check is executable and have permission to execute
+	} else {
+		options.Shell = os.Getenv("SHELL")
+		if options.Shell == "" {
+			options.Shell = "/bin/sh"
+		}
 	}
 
 	return nil
