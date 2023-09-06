@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/pp"
@@ -135,7 +136,10 @@ exit 1`)
 	// run!
 	err := app.Execute()
 	if err != nil {
-		l("Error: %v", err)
+		if !ee.Is(err, ee.Phantom) {
+			l("Error: %v", err)
+		}
+
 		os.Exit(1)
 	}
 }
@@ -160,17 +164,24 @@ func install() error {
 		return nil
 	}
 
-	// Ensure that we're inside a Git repository
-	// If git command is not found, status is null and we should return
-	// That's why status value needs to be checked explicitly
-	if git.Run("rev-parse").ExitCode != 0 {
+	result := git.Run("rev-parse", "--show-toplevel")
+	if result.ExitCode == -1 {
 		l("git command not found, skipping install")
 		return nil
 	}
+	if result.ExitCode != 0 {
+		return fmt.Errorf("not inside a git repository")
+	}
+
+	topLevel := string(bytes.TrimSpace(result.Output))
 
 	// Ensure that cwd is git top level
 	if _, err := os.Stat(".git"); err != nil {
-		return fmt.Errorf(".git can't be found")
+		l(`Please go to the root of the git repository to run "kitty install"
+> cd "` + topLevel + `"
+> kitty install`)
+
+		return ee.Phantom
 	}
 
 	// Start install
@@ -180,8 +191,8 @@ func install() error {
 		l("Git hooks failed to install")
 		return err
 	}
-	// Create .kitty/_/.gitignore
-	if err := os.WriteFile(filepath.Join(dir, "_", ".gitignore"), []byte("*"), 0644); err != nil {
+	// Create .kitty/.gitignore
+	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("/_\n/.bin\n/.gitignore"), 0644); err != nil {
 		l("Git hooks failed to install")
 		return err
 	}
