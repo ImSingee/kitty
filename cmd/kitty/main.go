@@ -73,6 +73,27 @@ func main() {
 				return nil
 			},
 		},
+		&cobra.Command{
+			Use:    "hook-invoke <hook-name> <version>",
+			Args:   cobra.MinimumNArgs(2),
+			Hidden: true,
+			RunE: func(cmd *cobra.Command, args []string) error {
+				hookName := args[0]
+				hookVersion := args[1]
+
+				if hookVersion != "1" {
+					fmt.Println(`echo "Your kitty version is too low, please upgrade"
+exit 1`)
+					return nil
+				}
+
+				fmt.Println(`export KITTY_VERSION=` + version)
+
+				_ = hookName
+
+				return nil
+			},
+		},
 	)
 
 	app.AddCommand(extensions...)

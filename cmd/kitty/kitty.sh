@@ -22,6 +22,9 @@ if [ -z "$kitty_skip_init" ]; then
     fi
   done
 
+  export PATH="$(pwd)/.kitty/.bin:$PATH"
+  eval "$(kitty hook-invoke $hook_name 1)"
+
   readonly kitty_skip_init=1
   export kitty_skip_init
 
