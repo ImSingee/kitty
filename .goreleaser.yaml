@@ -32,10 +32,9 @@ changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - '^docs?:'
+      - '^tests?:'
       - '^ci:'
-      - '^test:'
 brews:
   - name: kitty
     repository:
