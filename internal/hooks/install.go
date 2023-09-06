@@ -9,19 +9,27 @@ import (
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type installOptions struct {
-	notFirst bool // only print success message in first install
+	hideSuccessMessageIfNotFirstInstall bool // only print success message in first install
+	generateEnvRc                       bool
 }
 
 func InstallCommand() *cobra.Command {
 	o := &installOptions{}
 
+	fromDirEnv := false
+
 	cmd := &cobra.Command{
 		Use:  "install",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if fromDirEnv {
+				o.hideSuccessMessageIfNotFirstInstall = true
+			}
+
 			return o.install()
 		},
 	}
@@ -29,8 +37,9 @@ func InstallCommand() *cobra.Command {
 	flags := cmd.Flags()
 
 	flags.SortFlags = false
-	flags.BoolVar(&o.notFirst, "not-first", false, "")
-	_ = flags.MarkHidden("not-first")
+	flags.BoolVar(&o.generateEnvRc, "direnv", false, "generate .envrc file")
+	flags.BoolVar(&fromDirEnv, "from-direnv", false, "")
+	_ = flags.MarkHidden("from-direnv")
 
 	return cmd
 }
@@ -91,9 +100,35 @@ func (o *installOptions) install() error {
 		return err
 	}
 
-	if !kittyShExists || !o.notFirst {
+	if !kittyShExists || !o.hideSuccessMessageIfNotFirstInstall {
 		l("Git hooks installed")
 	}
 
+	if o.generateEnvRc {
+		err := o.writeEnvRcFile()
+		if err != nil {
+			return err
+		}
+
+	}
+
 	return nil
+}
+
+//go:embed "envrc"
+var dotEnvRcFile []byte
+
+func (o *installOptions) writeEnvRcFile() error {
+	_, err := os.Stat(".envrc")
+	if err == nil {
+		l(`.envrc file already exists, please write following content to your .envrc file manually:` + "\n" + strings.TrimSpace(string(dotEnvRcFile)))
+		return fmt.Errorf(".envrc file already exists")
+	}
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("failed to access .envrc file: %w", err)
+		}
+	}
+
+	return os.WriteFile(".envrc", dotEnvRcFile, 0755)
 }
