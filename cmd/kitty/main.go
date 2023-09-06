@@ -8,6 +8,7 @@ import (
 	lintstaged "github.com/ImSingee/kitty/internal/ext/lint-staged"
 	"github.com/ImSingee/kitty/internal/hooks"
 	"github.com/ImSingee/kitty/internal/lib/xlog"
+	"github.com/ImSingee/kitty/internal/tools"
 	"github.com/spf13/cobra"
 	"io"
 	"log/slog"
@@ -34,6 +35,7 @@ func main() {
 	}
 
 	app.AddCommand(hooks.Commands()...)
+	app.AddCommand(tools.Commands()...)
 
 	app.AddCommand(
 		&cobra.Command{
