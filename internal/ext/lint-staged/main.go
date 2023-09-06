@@ -3,8 +3,40 @@ package lintstaged
 import (
 	"fmt"
 	"github.com/ImSingee/go-ex/ee"
+	"github.com/spf13/cobra"
 	"os"
 )
+
+func Commands() []*cobra.Command {
+	o := &Options{}
+
+	cmd := &cobra.Command{
+		Use:     "lint-staged",
+		Aliases: []string{"lint", "@lint-staged"},
+		Args:    cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if o.Diff != "" {
+				o.Stash = false
+			}
+
+			return Run(o)
+		},
+	}
+
+	flags := cmd.Flags()
+	flags.SortFlags = false
+	flags.BoolVar(&o.AllowEmpty, "allow-empty", false, "allow empty commits when tasks revert all staged changes")
+	flags.StringVarP(&o.ConfigPath, "config", "c", "", "path to configuration file")
+	flags.StringVar(&o.Diff, "diff", "", `override the default "--staged" flag of "git diff" to get list of files. Implies "--stash=false"`)
+	flags.StringVar(&o.DiffFilter, "diff-filter", "", `override the default "--diff-filter=ACMR" flag of "git diff" to get list of files`)
+	flags.BoolVar(&o.Stash, "stash", true, "enable the backup stash, and revert in case of errors")
+	flags.StringVarP(&o.Shell, "shell", "x", "", "use a custom shell to execute tasks with; defaults to the shell specified in the environment variable $SHELL, or /bin/sh if not set")
+	flags.BoolVarP(&o.Verbose, "verbose", "v", false, "show task output even when tasks succeed; by default only failed output is shown")
+
+	// TODO concurrent
+
+	return []*cobra.Command{cmd}
+}
 
 type Options struct {
 	AllowEmpty bool

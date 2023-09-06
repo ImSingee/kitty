@@ -5,6 +5,7 @@ import (
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/pp"
 	"github.com/ImSingee/kitty/internal/config"
+	lintstaged "github.com/ImSingee/kitty/internal/ext/lint-staged"
 	"github.com/ImSingee/kitty/internal/hooks"
 	"github.com/ImSingee/kitty/internal/lib/xlog"
 	"github.com/spf13/cobra"
@@ -22,8 +23,6 @@ const help = `Usage:
   kitty add <hook-name> <cmd>
   kitty @extension ...
 `
-
-var extensions []*cobra.Command
 
 func main() {
 	app := &cobra.Command{
@@ -47,8 +46,23 @@ func main() {
 			},
 		},
 	)
+	// load internal extensions
+	app.AddCommand(lintstaged.Commands()...)
 
-	app.AddCommand(extensions...)
+	// for extension
+	app.TraverseChildren = true
+	app.Flags().SetInterspersed(false)
+	app.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 || len(args[0]) <= 1 || !strings.HasPrefix(args[0], "@") {
+			return cmd.Help()
+		}
+
+		extensionName := args[0][1:]
+		//extensionArgs := args[1:]
+		// TODO real run extensions
+
+		return ee.Errorf("unknown extension `%s`", extensionName)
+	}
 
 	// for global flags
 	app.PersistentFlags().SortFlags = false
@@ -84,21 +98,6 @@ func main() {
 		}
 
 		return nil
-	}
-
-	// for extension
-	app.TraverseChildren = true
-	app.Flags().SetInterspersed(false)
-	app.RunE = func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 || len(args[0]) <= 1 || !strings.HasPrefix(args[0], "@") {
-			return cmd.Help()
-		}
-
-		extensionName := args[0][1:]
-		//extensionArgs := args[1:]
-		// TODO real run extensions
-
-		return ee.Errorf("unknown extension `%s`", extensionName)
 	}
 
 	// run!
