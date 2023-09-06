@@ -5,12 +5,12 @@ f=".kitty/pre-commit"
 
 kitty install
 
-kitty add $f "foo"
+kitty add pre-commit "foo"
 grep -m 1 _ $f && grep foo $f && ok
 
-kitty add .kitty/pre-commit "bar"
+kitty add pre-commit "bar"
 grep -m 1 _ $f && grep foo $f && grep bar $f && ok
 
-kitty set .kitty/pre-commit "baz"
+kitty set pre-commit "baz"
 grep -m 1 _ $f && grep foo $f || grep bar $f || grep baz $f && ok
 
