@@ -147,11 +147,13 @@ your-cmd file1.ext file2.ext
 
 We do not run commands in parallels now, but we plan to support it (and make it default) in the future.
 
-### Platform Support
+## Platform Support
 
-The `lint-staged` extension is not supported on windows platform now, please use it on Linux or macOS.
+Unfortunately, kitty is not supported Windows platform now, please use it on Linux or macOS.
 
-We are working on it, but it's not an urgent task. If you really need it, PR is welcome.
+We will start working on it after our features are stable. If you are a Windows user, consider using WSL.
+
+If you really want to use kitty on Windows, PR is welcome.
 
 ## Credits
 
