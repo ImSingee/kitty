@@ -9,7 +9,6 @@ import (
 type Options struct {
 	AllowEmpty bool
 	ConfigPath string
-	Debug      bool
 	Diff       string
 	DiffFilter string
 	Stash      bool

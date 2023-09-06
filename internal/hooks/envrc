@@ -1,0 +1,2 @@
+export PATH="$(pwd)/.kitty/.bin:$PATH"
+kitty install --not-first

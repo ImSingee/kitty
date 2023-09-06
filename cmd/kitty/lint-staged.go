@@ -11,7 +11,6 @@ func init() {
 	var diff string
 	var diffFilter string
 	var stash bool
-	var quiet bool
 	var shell string
 	var verbose bool
 
@@ -30,11 +29,9 @@ func init() {
 			options := &lintstaged.Options{
 				AllowEmpty: allowEmpty,
 				ConfigPath: configPath,
-				Debug:      debug,
 				Diff:       diff,
 				DiffFilter: diffFilter,
 				Stash:      stash,
-				Quiet:      quiet,
 				Shell:      shell,
 				Verbose:    verbose,
 			}
@@ -49,7 +46,6 @@ func init() {
 	flags.StringVar(&diff, "diff", "", `override the default "--staged" flag of "git diff" to get list of files. Implies "--stash=false"`)
 	flags.StringVar(&diffFilter, "diff-filter", "", `override the default "--diff-filter=ACMR" flag of "git diff" to get list of files`)
 	flags.BoolVar(&stash, "stash", true, "enable the backup stash, and revert in case of errors")
-	//flags.BoolVarP(&quiet, "quiet", "q", false, "disable lint-staged’s own console output")
 	flags.StringVarP(&shell, "shell", "x", "", "use a custom shell to execute tasks with; defaults to the shell specified in the environment variable $SHELL, or /bin/sh if not set")
 	flags.BoolVarP(&verbose, "verbose", "v", false, "show task output even when tasks succeed; by default only failed output is shown")
 
