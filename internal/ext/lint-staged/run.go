@@ -15,10 +15,10 @@ import (
 
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/exbytes"
-	"github.com/ImSingee/go-ex/glob"
 	"github.com/ImSingee/go-ex/mr"
 	"github.com/ImSingee/go-ex/pp"
 
+	"github.com/ImSingee/kitty/internal/lib/glob"
 	"github.com/ImSingee/kitty/internal/lib/shells"
 	"github.com/ImSingee/kitty/internal/lib/tl"
 )
@@ -327,7 +327,6 @@ func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string, opti
 		return strings.HasPrefix(in, wd+string(filepath.Separator))
 	})
 	files = mr.Filter(files, func(in string, index int) bool {
-		// TODO support multi level match
 		return glob.Match(rule.Glob, filepath.Base(in))
 	})
 
