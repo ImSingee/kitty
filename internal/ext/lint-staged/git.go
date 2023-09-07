@@ -1,11 +1,12 @@
 package lintstaged
 
 import (
-	"github.com/ImSingee/kitty/internal/lib/git"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/ImSingee/kitty/internal/lib/git"
 )
 
 func execGit(args []string, dir string) (string, error) {

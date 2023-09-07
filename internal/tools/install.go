@@ -1,18 +1,20 @@
 package tools
 
 import (
-	"github.com/ImSingee/go-ex/ee"
-	"github.com/ImSingee/go-ex/mr"
-	"github.com/ImSingee/go-ex/pp"
-	"github.com/ImSingee/kitty/internal/config"
-	extregistry "github.com/ImSingee/kitty/internal/extension-registry"
-	"github.com/ImSingee/kitty/internal/lib/git"
-	"github.com/spf13/cobra"
-	"github.com/ysmood/gson"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/ImSingee/go-ex/ee"
+	"github.com/ImSingee/go-ex/mr"
+	"github.com/ImSingee/go-ex/pp"
+	"github.com/spf13/cobra"
+	"github.com/ysmood/gson"
+
+	"github.com/ImSingee/kitty/internal/config"
+	extregistry "github.com/ImSingee/kitty/internal/extension-registry"
+	"github.com/ImSingee/kitty/internal/lib/git"
 )
 
 type installOptions struct {

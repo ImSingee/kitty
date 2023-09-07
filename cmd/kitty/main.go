@@ -2,18 +2,20 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log/slog"
+	"os"
+	"strings"
+
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/pp"
+	"github.com/spf13/cobra"
+
 	"github.com/ImSingee/kitty/internal/config"
 	lintstaged "github.com/ImSingee/kitty/internal/ext/lint-staged"
 	"github.com/ImSingee/kitty/internal/hooks"
 	"github.com/ImSingee/kitty/internal/lib/xlog"
 	"github.com/ImSingee/kitty/internal/tools"
-	"github.com/spf13/cobra"
-	"io"
-	"log/slog"
-	"os"
-	"strings"
 
 	_ "embed"
 )

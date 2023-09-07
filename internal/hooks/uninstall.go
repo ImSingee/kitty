@@ -1,8 +1,9 @@
 package hooks
 
 import (
-	"github.com/ImSingee/kitty/internal/lib/git"
 	"github.com/spf13/cobra"
+
+	"github.com/ImSingee/kitty/internal/lib/git"
 )
 
 type uninstallOptions struct{}

@@ -1,8 +1,9 @@
 package lintstaged
 
 import (
-	"github.com/ImSingee/go-ex/set"
 	"sync"
+
+	"github.com/ImSingee/go-ex/set"
 )
 
 type State struct {

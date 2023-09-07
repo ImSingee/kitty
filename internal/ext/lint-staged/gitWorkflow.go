@@ -1,14 +1,16 @@
 package lintstaged
 
 import (
-	"github.com/ImSingee/go-ex/ee"
-	"github.com/ImSingee/go-ex/mr"
-	"github.com/ImSingee/kitty/internal/lib/git"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/ImSingee/go-ex/ee"
+	"github.com/ImSingee/go-ex/mr"
+
+	"github.com/ImSingee/kitty/internal/lib/git"
 )
 
 type gitWorkflow struct {

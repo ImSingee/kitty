@@ -1,5 +1,11 @@
 {
   "lint-staged": {
-    "*.go": "go fmt"
+    "*.go": [
+      "gofmt -w -s -l",
+      "gci write -s Standard -s Default -s 'Prefix(github.com/ImSingee/kitty)' -s Blank -s Dot --skip-generated"
+    ]
+  },
+  "tools": {
+    "gci": "0.11.1"
   }
 }

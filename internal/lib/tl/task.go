@@ -2,10 +2,11 @@ package tl
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/ImSingee/go-ex/ee"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/google/uuid"
-	"strings"
 )
 
 type Task struct {

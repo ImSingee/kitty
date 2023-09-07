@@ -2,13 +2,15 @@ package hooks
 
 import (
 	"fmt"
-	"github.com/ImSingee/go-ex/ee"
-	"github.com/ImSingee/kitty/internal/lib/git"
-	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/ImSingee/go-ex/ee"
+	"github.com/spf13/cobra"
+
+	"github.com/ImSingee/kitty/internal/lib/git"
 )
 
 type addOrSetOptions struct {

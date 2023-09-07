@@ -2,9 +2,6 @@ package extregistry
 
 import (
 	"encoding/json"
-	"github.com/ImSingee/go-ex/ee"
-	"github.com/ImSingee/go-ex/pp"
-	"github.com/ImSingee/kitty/internal/config"
 	"io"
 	"net/http"
 	"net/url"
@@ -13,6 +10,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/ImSingee/go-ex/ee"
+	"github.com/ImSingee/go-ex/pp"
+
+	"github.com/ImSingee/kitty/internal/config"
 )
 
 // GetAppVersion will get the app and version from registry

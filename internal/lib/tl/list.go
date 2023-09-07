@@ -1,10 +1,11 @@
 package tl
 
 import (
+	"strings"
+
 	"github.com/ImSingee/go-ex/mr"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/google/uuid"
-	"strings"
 )
 
 type TaskList struct {

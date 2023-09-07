@@ -2,14 +2,17 @@ package hooks
 
 import (
 	"bytes"
-	_ "embed"
 	"fmt"
-	"github.com/ImSingee/go-ex/ee"
-	"github.com/ImSingee/kitty/internal/lib/git"
-	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/ImSingee/go-ex/ee"
+	"github.com/spf13/cobra"
+
+	"github.com/ImSingee/kitty/internal/lib/git"
+
+	_ "embed"
 )
 
 type installOptions struct {

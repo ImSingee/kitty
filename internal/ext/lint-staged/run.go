@@ -4,12 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/ImSingee/go-ex/ee"
-	"github.com/ImSingee/go-ex/exbytes"
-	"github.com/ImSingee/go-ex/glob"
-	"github.com/ImSingee/go-ex/mr"
-	"github.com/ImSingee/kitty/internal/lib/shells"
-	"github.com/ImSingee/kitty/internal/lib/tl"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -18,6 +12,14 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/ImSingee/go-ex/ee"
+	"github.com/ImSingee/go-ex/exbytes"
+	"github.com/ImSingee/go-ex/glob"
+	"github.com/ImSingee/go-ex/mr"
+
+	"github.com/ImSingee/kitty/internal/lib/shells"
+	"github.com/ImSingee/kitty/internal/lib/tl"
 )
 
 func runAll(options *Options) (*State, error) {

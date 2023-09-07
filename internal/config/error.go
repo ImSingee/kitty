@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/ImSingee/go-ex/ee"
 	"os"
+
+	"github.com/ImSingee/go-ex/ee"
 )
 
 var ErrNotExist = os.ErrNotExist

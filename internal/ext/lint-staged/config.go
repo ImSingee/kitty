@@ -4,18 +4,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ImSingee/go-ex/ee"
-	"github.com/ImSingee/go-ex/exstrings"
-	"github.com/ImSingee/go-ex/mr"
-	"github.com/ImSingee/go-ex/set"
-	"github.com/ImSingee/kitty/internal/config"
-	"github.com/ysmood/gson"
 	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/ImSingee/go-ex/ee"
+	"github.com/ImSingee/go-ex/exstrings"
+	"github.com/ImSingee/go-ex/mr"
+	"github.com/ImSingee/go-ex/set"
+	"github.com/ysmood/gson"
+
+	"github.com/ImSingee/kitty/internal/config"
 )
 
 type Config struct {

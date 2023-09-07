@@ -2,9 +2,10 @@ package lintstaged
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 func Commands() []*cobra.Command {

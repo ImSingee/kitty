@@ -2,8 +2,10 @@ package hooks
 
 import (
 	"fmt"
-	"github.com/ImSingee/kitty/internal/lib/shells"
+
 	"github.com/spf13/cobra"
+
+	"github.com/ImSingee/kitty/internal/lib/shells"
 )
 
 type invokeOptions struct {

@@ -3,11 +3,12 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/exjson"
 	"github.com/ysmood/gson"
-	"os"
-	"path/filepath"
 )
 
 var ConfigFileNames = []string{

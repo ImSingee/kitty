@@ -1,12 +1,14 @@
 package tools
 
 import (
-	"github.com/ImSingee/go-ex/ee"
-	"github.com/ImSingee/kitty/internal/config"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/ImSingee/go-ex/ee"
+
+	"github.com/ImSingee/kitty/internal/config"
 )
 
 type listOptions struct{}

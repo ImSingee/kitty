@@ -2,15 +2,17 @@ package test
 
 import (
 	"bytes"
-	"github.com/ImSingee/kitty/internal/lib/git"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/ImSingee/kitty/internal/lib/git"
 )
 
 func TestHooks(t *testing.T) {

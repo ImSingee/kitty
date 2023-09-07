@@ -2,15 +2,12 @@
 package ignore
 
 import (
-	"os"
-
-	"io/ioutil"
-	"path/filepath"
-
 	"fmt"
-	"testing"
-
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"runtime"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 )

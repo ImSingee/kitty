@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/ImSingee/kitty/internal/lib/tl"
-	"github.com/spf13/cobra"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/spf13/cobra"
+
+	"github.com/ImSingee/kitty/internal/lib/tl"
 )
 
 func init() {
