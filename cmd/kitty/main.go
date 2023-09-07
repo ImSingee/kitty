@@ -5,6 +5,8 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/ImSingee/go-ex/ee"
@@ -15,6 +17,7 @@ import (
 	"github.com/ImSingee/kitty/internal/ext/format"
 	lintstaged "github.com/ImSingee/kitty/internal/ext/lint-staged"
 	"github.com/ImSingee/kitty/internal/hooks"
+	"github.com/ImSingee/kitty/internal/lib/git"
 	"github.com/ImSingee/kitty/internal/lib/xlog"
 	"github.com/ImSingee/kitty/internal/tools"
 
@@ -64,10 +67,9 @@ func main() {
 		}
 
 		extensionName := args[0][1:]
-		//extensionArgs := args[1:]
-		// TODO real run extensions
+		extensionArgs := args[1:]
 
-		return ee.Errorf("unknown extension `%s`", extensionName)
+		return runExtension(extensionName, extensionArgs)
 	}
 
 	// for global flags
@@ -124,4 +126,30 @@ func l(msg string, args ...any) {
 	}
 
 	_, _ = os.Stderr.Write([]byte("kitty - " + strings.TrimSpace(s) + "\n"))
+}
+
+func runExtension(name string, args []string) error {
+	root, err := git.GetRoot("")
+	if err != nil {
+		return ee.Wrap(err, "cannot get git root")
+	}
+
+	// TODO verify tools (check exist, check version)
+	// TODO call tools.GetTool (like below, refactor later)
+	// run apps
+	if appBin, err := exec.LookPath(filepath.Join(root, ".kitty", ".bin", name)); err == nil {
+		// bin extension
+
+		cmd := exec.Command(appBin, args...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		cmd.Env = append([]string{
+			"KITTY_GIT_ROOT=" + root,
+		}, os.Environ()...)
+
+		return cmd.Run()
+	}
+
+	return ee.Errorf("unknown extension `%s`", name)
 }
