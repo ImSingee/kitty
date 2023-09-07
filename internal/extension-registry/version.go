@@ -9,7 +9,7 @@ func normalizeGoVersion(v string) string {
 		return "latest"
 	}
 
-	if version, err := semver.NewVersion(v); err != nil {
+	if version, err := semver.NewVersion(v); err == nil {
 		return "v" + version.String()
 	}
 

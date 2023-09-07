@@ -15,31 +15,31 @@ import (
 	"strings"
 )
 
-type installOptionsMain struct {
+type installOptions struct {
 	toInstall []string
 }
 
 func InstallCommand() *cobra.Command {
-	o := &installOptionsMain{}
+	o := &installOptions{}
 	cmd := &cobra.Command{
 		Use:     "install <app[@version]>",
 		Aliases: []string{"add"},
-		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if isRoot, _ := git.IsRoot(""); !isRoot {
 				return ee.Errorf("this command is only available in the root of a git repository")
 			}
 
-			return o.installMain()
+			// TODO lock to prevent concurrent install
+			o.toInstall = args
+
+			return o.install()
 		},
 	}
 
 	return cmd
 }
 
-func (o *installOptionsMain) installMain() error {
-	// TODO lock to prevent concurrent install
-
+func (o *installOptions) install() error {
 	// load tools from config
 	currentTools, err := (&listOptions{}).getCurrentToolsMap()
 	if err != nil {
@@ -137,7 +137,7 @@ func (o *installOptionsMain) installMain() error {
 	return nil
 }
 
-func (o *installOptionsMain) writeToolsInfo(tools map[string]string) error {
+func (o *installOptions) writeToolsInfo(tools map[string]string) error {
 	return config.PatchKittyConfig("", func(c map[string]gson.JSON) error {
 		c["tools"] = gson.New(tools)
 		return nil

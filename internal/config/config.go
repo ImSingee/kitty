@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/exjson"
@@ -87,10 +88,19 @@ func PatchKittyConfig(dir string, patch func(map[string]gson.JSON) error) error 
 		return err
 	}
 
-	err = exjson.Save(c, filename)
+	err = saveKittyConfig(filename, c)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func saveKittyConfig(filename string, c map[string]gson.JSON) error {
+	data, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return ee.Wrap(err, "cannot json encode config")
+	}
+
+	return os.WriteFile(filename, data, 0644)
 }
