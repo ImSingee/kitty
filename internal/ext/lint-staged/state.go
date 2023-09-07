@@ -8,12 +8,11 @@ import (
 
 type State struct {
 	shouldBackup bool
-	quiet        bool
 
 	hasPartiallyStagedFiles bool
 	taskResults             *sync.Map
 
-	output        []string
+	output        []string // all outputs will print to stderr at end
 	errors        *set.Set[error]
 	internalError bool
 	taskError     bool
@@ -31,6 +30,5 @@ func getInitialState(options *Options) *State {
 		hasPartiallyStagedFiles: false,
 		taskResults:             &sync.Map{},
 		errors:                  set.New[error](),
-		quiet:                   options.Quiet,
 	}
 }

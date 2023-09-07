@@ -3,7 +3,7 @@ module github.com/ImSingee/kitty
 go 1.20
 
 require (
-	github.com/ImSingee/go-ex v0.4.41
+	github.com/ImSingee/go-ex v0.4.42
 	github.com/ImSingee/semver v0.1.0
 	github.com/ImSingee/tt v1.0.4
 	github.com/alessio/shellescape v1.4.2

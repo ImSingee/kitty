@@ -17,6 +17,7 @@ import (
 	"github.com/ImSingee/go-ex/exbytes"
 	"github.com/ImSingee/go-ex/glob"
 	"github.com/ImSingee/go-ex/mr"
+	"github.com/ImSingee/go-ex/pp"
 
 	"github.com/ImSingee/kitty/internal/lib/shells"
 	"github.com/ImSingee/kitty/internal/lib/tl"
@@ -33,13 +34,10 @@ func runAll(options *Options) (*State, error) {
 	ctx := getInitialState(options)
 
 	gitDir, gitConfigDir, err := resolveGitRepo(cwd)
-	if err != nil {
+	if err != nil || gitDir == "" {
 		ctx.errors.Add(ErrGitRepo)
-		return ctx, ee.Wrap(err, "cannot resolve git repository")
-	}
-	if gitDir == "" {
-		ctx.errors.Add(ErrGitRepo)
-		return ctx, ee.New("not a git repository")
+		pp.ERedPrintln(x, "Current directory is not a git directory!")
+		return ctx, ee.Phantom
 	}
 
 	// Test whether we have any commits or not.
@@ -51,7 +49,7 @@ func runAll(options *Options) (*State, error) {
 	// and when using the default list of staged files by default
 	ctx.shouldBackup = hasInitialCommit && options.Stash
 	if !ctx.shouldBackup {
-		slog.Warn(skippingBackup(hasInitialCommit, options.Diff)) // TODO use print
+		pp.EYellowPrintln(skippingBackup(hasInitialCommit, options.Diff))
 	}
 
 	// get staged files (relative path)
@@ -71,9 +69,7 @@ func runAll(options *Options) (*State, error) {
 
 	// If there are no files avoid executing any lint-staged logic
 	if len(absoluteFiles) == 0 {
-		if !options.Quiet {
-			ctx.output = append(ctx.output, NO_STAGED_FILES)
-		}
+		pp.BluePrintln(info, "No staged files found.")
 		return ctx, nil
 	}
 
@@ -292,7 +288,7 @@ func generateTasksToRun(ctx *State, config map[*Config][]string, options *Option
 
 	return mr.Map(all, func(in *ConfigEntries, index int) *tl.Task {
 		return &tl.Task{
-			Title: in.Config.Path + fmt.Sprintf(" - %d files", len(in.Filenames)),
+			Title: in.Config.Path + symGray(fmt.Sprintf(" - %d files", len(in.Filenames))),
 			Run: func(callback tl.TaskCallback) error {
 				callback.AddSubTask(in.Tasks...)
 				return nil
@@ -345,7 +341,7 @@ func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string, opti
 	})
 
 	return &tl.Task{
-		Title: rule.Glob + suffix,
+		Title: rule.Glob + symGray(suffix),
 		Run: func(callback tl.TaskCallback) error {
 			if len(files) == 0 {
 				callback.Skip("")
@@ -365,7 +361,7 @@ func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string, opti
 
 func generateTaskForCommand(state *State, wd string, cmd *Command, onFiles []string, options *Options) *tl.Task {
 	return &tl.Task{
-		Title: cmd.Command + fmt.Sprintf(" - %d files", len(onFiles)),
+		Title: cmd.Command + symGray(fmt.Sprintf(" - %d files", len(onFiles))),
 		Run: func(callback tl.TaskCallback) (err error) {
 			if len(onFiles) == 0 {
 				callback.Skip("")
@@ -432,9 +428,9 @@ func printTaskResults(results *sync.Map, options *Options) {
 			anyResult = true
 		}
 
-		icon := "✖"
+		icon := x
 		if success {
-			icon = "✔"
+			icon = yes
 		}
 
 		cmd := result.cmd.Command
@@ -444,12 +440,18 @@ func printTaskResults(results *sync.Map, options *Options) {
 
 		if len(output) == 0 {
 			if success {
-				fmt.Printf("%s %s success without output.\n", icon, cmd)
+				pp.GreenPrintf("%s %s success without output.\n", icon, cmd)
 			} else {
-				fmt.Printf("%s %s failed without output. (%v)\n", icon, cmd, result.err)
+				pp.RedPrintf("%s %s failed without output. (%v)\n", icon, cmd, result.err)
 			}
 		} else {
-			fmt.Printf("%s %s:\n%s\n", icon, cmd, output)
+			if success {
+				pp.GreenPrintf("%s %s:\n", icon, cmd)
+			} else {
+				pp.RedPrintf("%s %s:\n", icon, cmd)
+			}
+
+			pp.Println(output)
 		}
 
 		return true

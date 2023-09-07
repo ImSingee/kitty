@@ -287,37 +287,48 @@ func (m taskModel) View() string {
 
 	b := strings.Builder{}
 
-	icon := "○"
+	icon := symBlue("?")
 	switch m.status {
 	case taskStatusPending:
-		icon = "○"
+		icon = symBlue("○")
 	case taskStatusRunning:
-		icon = ">"
+		icon = symBlue("○")
 	case taskStatusSuccess:
-		icon = "✓"
+		icon = symGreen("✓")
 	case taskStatusFailed:
-		icon = "✗"
+		icon = symRed("✗")
 	case taskStatusSkipped:
-		icon = "-"
+		icon = symGray("-")
 	}
 	b.WriteString(icon + " ")
 
-	b.WriteString(m.title)
+	switch m.status {
+	case taskStatusFailed:
+		b.WriteString(symRed(m.title))
+	case taskStatusSkipped:
+		b.WriteString(symGray(m.title))
+	default:
+		b.WriteString(m.title)
+	}
 
 	if m.status == taskStatusSkipped {
-		b.WriteString(" (skipped")
+		skipString := strings.Builder{}
+
+		skipString.WriteString(" (skipped")
 		if m.skipReason != "" {
-			b.WriteString(" - ")
-			b.WriteString(m.skipReason)
+			skipString.WriteString(" - ")
+			skipString.WriteString(m.skipReason)
 		}
-		b.WriteString(")")
+		skipString.WriteString(")")
+
+		b.WriteString(symGray(skipString.String()))
 	}
 
 	b.WriteString("\n")
 
 	if m.errorReason != "" {
-		b.WriteString("  ERROR: ")
-		b.WriteString(strings.TrimSpace(m.errorReason))
+		b.WriteString(symRed("  ERROR: "))
+		b.WriteString(symRed(strings.TrimSpace(m.errorReason)))
 		b.WriteString("\n")
 	}
 

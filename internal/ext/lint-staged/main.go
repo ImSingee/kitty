@@ -6,6 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/ImSingee/go-ex/ee"
+	"github.com/ImSingee/go-ex/pp"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +47,6 @@ type Options struct {
 	Diff       string
 	DiffFilter string
 	Stash      bool
-	Quiet      bool
 	Shell      string
 	Verbose    bool
 }
@@ -62,10 +62,8 @@ func Run(options *Options) error {
 	state, err := runAll(options)
 
 	for _, output := range state.output {
-		fmt.Println(output)
+		pp.EPrintln(output)
 	}
-
-	_ = state // TODO create output
 
 	return err
 }

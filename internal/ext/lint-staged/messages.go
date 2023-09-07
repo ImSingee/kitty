@@ -1,16 +1,18 @@
 package lintstaged
 
-import "github.com/ImSingee/go-ex/pp"
+import (
+	"fmt"
+
+	"github.com/ImSingee/go-ex/pp"
+)
 
 const (
 	info    = arrowRight
 	warning = "⚠"
+	x       = "✗"
+	yes     = "✔"
 
 	arrowRight = "→"
-)
-
-const (
-	NO_STAGED_FILES = info + " No staged files found."
 )
 
 func skippingBackup(hasInitialCommit bool, diff string) string {
@@ -24,5 +26,11 @@ func skippingBackup(hasInitialCommit bool, diff string) string {
 		reason = "there’s no initial commit yet"
 	}
 
-	return pp.YellowString("%s Skipping backup because %s.\n", warning, reason).GetForStdout()
+	return fmt.Sprintf("%s Skipping backup because %s.", warning, reason)
+}
+
+var gray = pp.GetColor(38, 5, 240)
+
+func symGray(s string) string {
+	return pp.ColorString(gray, s).GetForStdout()
 }

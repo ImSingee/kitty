@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -112,20 +111,11 @@ func main() {
 	err := app.Execute()
 	if err != nil {
 		if !ee.Is(err, ee.Phantom) {
-			l("Error: %v", err)
+			pp.ERedPrintln("Error:", err.Error())
 		}
 
 		os.Exit(1)
 	}
-}
-
-func l(msg string, args ...any) {
-	s := msg
-	if len(args) != 0 {
-		s = fmt.Sprintf(msg, args...)
-	}
-
-	_, _ = os.Stderr.Write([]byte("kitty - " + strings.TrimSpace(s) + "\n"))
 }
 
 func runExtension(name string, args []string) error {
