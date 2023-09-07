@@ -3,6 +3,7 @@ package lintstaged
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/spf13/cobra"
@@ -70,14 +71,17 @@ func Run(options *Options) error {
 }
 
 func validateOptions(options *Options) error {
-	if options.Shell != "" {
-		// TODO check is executable and have permission to execute
-	} else {
+	if options.Shell == "" {
 		options.Shell = os.Getenv("SHELL")
 		if options.Shell == "" {
 			options.Shell = "/bin/sh"
 		}
 	}
+	shell, err := exec.LookPath(options.Shell)
+	if err != nil {
+		return fmt.Errorf("shell `%s` not found or cannot execute", options.Shell)
+	}
+	options.Shell = shell
 
 	return nil
 }

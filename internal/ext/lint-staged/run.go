@@ -77,7 +77,7 @@ func runAll(options *Options) (*State, error) {
 		return ctx, nil
 	}
 
-	foundConfigs, err := searchConfigs(cwd, gitDir, options.ConfigPath, nil) // TODO config object support
+	foundConfigs, err := searchConfigs(cwd, gitDir, options.ConfigPath)
 	if err != nil {
 		return ctx, ee.Wrap(err, "cannot load configs")
 	}
@@ -297,7 +297,6 @@ func generateTasksToRun(ctx *State, config map[*Config][]string, options *Option
 				callback.AddSubTask(in.Tasks...)
 				return nil
 			},
-			PostRun: nil, // TODO if not error, then hide self
 		}
 	})
 }
@@ -386,7 +385,7 @@ func generateTaskForCommand(state *State, wd string, cmd *Command, onFiles []str
 				}))
 			}
 
-			args := cmd.Command + " " + fileArgs
+			args := cmd.execCommand + " " + fileArgs
 
 			p := exec.Command(shell, "-c", args)
 			p.Dir = wd

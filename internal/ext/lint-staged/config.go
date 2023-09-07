@@ -31,19 +31,15 @@ type Rule struct {
 }
 
 type Command struct {
-	Command  string
+	Command  string // command show to user
 	Absolute bool
 	NoArgs   bool
+
+	execCommand string // real command to execute
 }
 
-func searchConfigs(cwd, gitDir, configPath string, configObject *Config) ([]*Config, error) {
+func searchConfigs(cwd, gitDir, configPath string) ([]*Config, error) {
 	slog.Debug("Searching for configuration files...")
-
-	if configObject != nil {
-		slog.Debug("Using single direct configuration object...")
-
-		return []*Config{configObject}, nil
-	}
 
 	// Use only explicit config path instead of discovering multiple
 	if configPath != "" {
@@ -291,33 +287,52 @@ func parseStringCommand(cmd string) (*Command, error) {
 
 	cmdIn := cmd // backup for error message
 
-	if !strings.HasPrefix(cmd, "[") { // no options
-		return &Command{Command: cmd}, nil
-	}
+	if strings.HasPrefix(cmd, "[") { // custom options
+	loop:
+		for {
+			switch {
+			case strings.HasPrefix(cmd, "[absolute]"):
+				result.Absolute = true
+				cmd = strings.TrimPrefix(cmd, "[absolute]")
+			case strings.HasPrefix(cmd, "[noArgs]"):
+				result.NoArgs = true
+				cmd = strings.TrimPrefix(cmd, "[noArgs]")
+			default:
+				break loop
+			}
+		}
 
-loop:
-	for {
-		switch {
-		case strings.HasPrefix(cmd, "[absolute]"):
-			result.Absolute = true
-			cmd = strings.TrimPrefix(cmd, "[absolute]")
-		case strings.HasPrefix(cmd, "[noArgs]"):
-			result.NoArgs = true
-			cmd = strings.TrimPrefix(cmd, "[noArgs]")
-		default:
-			break loop
+		if strings.HasPrefix(cmd, "[") || strings.HasPrefix(cmd, " [") {
+			return nil, fmt.Errorf("command `%s` contains unknown options", cmdIn)
+		}
+
+		if result.Absolute && result.NoArgs {
+			return nil, fmt.Errorf("command `%s` cannot have both [absolute] and [noArgs] options", cmdIn)
 		}
 	}
 
-	if strings.HasPrefix(cmd, "[") || strings.HasPrefix(cmd, " [") {
-		return nil, fmt.Errorf("command `%s` contains unknown options", cmdIn)
+	cmd = strings.TrimSpace(cmd)
+
+	if strings.HasPrefix(cmd, "@") {
+		cmd = "kitty " + cmd
 	}
 
-	if result.Absolute && result.NoArgs {
-		return nil, fmt.Errorf("command `%s` cannot have both [absolute] and [noArgs] options", cmdIn)
+	if strings.HasPrefix(cmd, "kitty ") {
+		// change to self's absolute path (to avoid conflict)
+		kitty, err := os.Executable()
+		if err != nil {
+			return nil, ee.Wrap(err, "cannot get current kitty's executable path")
+		}
+		result.execCommand = kitty + cmd[5:]
+	} else {
+		// TODO use .kitty/.bin/xxx as first priority
 	}
 
-	result.Command = strings.TrimSpace(cmd)
+	result.Command = cmd
+
+	if result.execCommand == "" {
+		result.execCommand = result.Command
+	}
 
 	return result, nil
 }

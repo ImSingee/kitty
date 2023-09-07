@@ -3,7 +3,8 @@
     "*.go": [
       "gofmt -w -s -l",
       "gci write -s Standard -s Default -s 'Prefix(github.com/ImSingee/kitty)' -s Blank -s Dot --skip-generated"
-    ]
+    ],
+    "*.json": "@format"
   },
   "tools": {
     "gci": "0.11.1"

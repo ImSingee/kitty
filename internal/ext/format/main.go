@@ -6,8 +6,7 @@ func Commands() []*cobra.Command {
 	o := &options{}
 
 	cmd := &cobra.Command{
-		Use:  "@format",
-		Args: cobra.NoArgs,
+		Use: "@format",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			o.files = args
 
