@@ -181,7 +181,7 @@ func goInstallTo(version string, pkg string, dst string, showProgress bool) erro
 	pkgWithVersion := pkg
 	if !strings.Contains(pkg, "@") {
 		// append version to pkg
-		pkgWithVersion = pkg + "@v" + strings.TrimPrefix(version, "v")
+		pkgWithVersion = pkg + "@" + normalizeGoVersion(version)
 	}
 
 	cmd := exec.Command("go", "install", pkgWithVersion)

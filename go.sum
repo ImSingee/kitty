@@ -1,5 +1,7 @@
 github.com/ImSingee/go-ex v0.4.41 h1:/Rrfx6PdpKEAm6Rz42nllnG0f+Qs5TPsBbRz856RiqA=
 github.com/ImSingee/go-ex v0.4.41/go.mod h1:CNc3Fqk9GkQfm/1x53vGnQ0BEHH+52siqBJFkVwdy8U=
+github.com/ImSingee/semver v0.1.0 h1:h0l6RYP2KK3PKQlvd4TDsvHWThwcjGHm47GtTk9hMR8=
+github.com/ImSingee/semver v0.1.0/go.mod h1:oFE1h7iyQ3+khH/BqhWtr03FMSKeWIApAhIrWF/bf+E=
 github.com/ImSingee/tt v1.0.4 h1:avDmypiAGmTEaRVJ1hweLzggyKRVfuUfLsGrebTrAyQ=
 github.com/ImSingee/tt v1.0.4/go.mod h1:7O7v+cIBruYWGFObw85DDjH0gNLquen1cJqMR3GOgxw=
 github.com/alessio/shellescape v1.4.2 h1:MHPfaU+ddJ0/bYWpgIeUnQUqKrlJ1S7BfEYPM4uEoM0=
