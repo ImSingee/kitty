@@ -6,4 +6,4 @@ GIT_ROOT="$(git rev-parse --show-toplevel)"
 cd "$(mktemp -d)"
 git clone "$GIT_ROOT/.git" kitty
 cd kitty
-./test.sh
+./test.sh -failfast
