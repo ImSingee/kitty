@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ImSingee/kitty/internal/config"
+	"github.com/ImSingee/kitty/internal/ext/format"
 	lintstaged "github.com/ImSingee/kitty/internal/ext/lint-staged"
 	"github.com/ImSingee/kitty/internal/hooks"
 	"github.com/ImSingee/kitty/internal/lib/xlog"
@@ -52,6 +53,7 @@ func main() {
 	)
 	// load internal extensions
 	app.AddCommand(lintstaged.Commands()...)
+	app.AddCommand(format.Commands()...)
 
 	// for extension
 	app.TraverseChildren = true

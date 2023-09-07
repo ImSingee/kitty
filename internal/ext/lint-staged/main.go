@@ -12,8 +12,8 @@ func Commands() []*cobra.Command {
 	o := &Options{}
 
 	cmd := &cobra.Command{
-		Use:     "lint-staged",
-		Aliases: []string{"lint", "@lint-staged"},
+		Use:     "@lint-staged",
+		Aliases: []string{"@lintstaged"},
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if o.Diff != "" {
