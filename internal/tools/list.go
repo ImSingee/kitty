@@ -63,6 +63,10 @@ func (o *listOptions) getInstalledTools() (map[string]string, error) {
 
 	files, err := os.ReadDir(filepath.Join(w, ".kitty", ".bin"))
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+
 		return nil, ee.Wrap(err, "cannot read .kitty/.bin dir")
 	}
 

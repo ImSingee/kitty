@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 type installOptions struct {
 	hideSuccessMessageIfNotFirstInstall bool // only print success message in first install
+	doNotInstallTools                   bool
 	generateEnvRc                       bool
 }
 
@@ -43,6 +45,7 @@ func InstallCommand() *cobra.Command {
 	flags.BoolVar(&o.generateEnvRc, "direnv", false, "generate .envrc file")
 	flags.BoolVar(&fromDirEnv, "from-direnv", false, "")
 	_ = flags.MarkHidden("from-direnv")
+	flags.BoolVar(&o.doNotInstallTools, "no-tools", false, "do not install tools")
 
 	return cmd
 }
@@ -107,12 +110,17 @@ func (o *installOptions) install() error {
 		l("Git hooks installed")
 	}
 
+	if !o.doNotInstallTools {
+		if err := o.installTools(); err != nil {
+			return ee.Wrap(err, "cannot install tools")
+		}
+	}
+
 	if o.generateEnvRc {
 		err := o.writeEnvRcFile()
 		if err != nil {
 			return err
 		}
-
 	}
 
 	return nil
@@ -134,4 +142,19 @@ func (o *installOptions) writeEnvRcFile() error {
 	}
 
 	return os.WriteFile(".envrc", dotEnvRcFile, 0755)
+}
+
+func (o *installOptions) installTools() error {
+	// run `kitty tools install` in a subprocess
+
+	self, err := os.Executable()
+	if err != nil {
+		self = "/proc/self/exe" // linux only
+	}
+
+	cmd := exec.Command(self, "tools", "install")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
 }

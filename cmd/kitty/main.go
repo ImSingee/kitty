@@ -22,8 +22,8 @@ import (
 
 const help = `Usage:
   kitty install
-  kitty uninstall
   kitty add <hook-name> <cmd>
+  kitty tools install <tool-name>
   kitty @extension ...
 `
 
