@@ -8,6 +8,10 @@ func Commands() []*cobra.Command {
 		Aliases: []string{"tool"},
 	}
 
+	// kitty tools install 自动安装尚未安装/版本不匹配的 tools
+	// kitty tools install xxx 安装指定的 tools（改成做 diff 安装，类似 pnpm）
+	// kitty install 自动执行 kitty tools install
+
 	cmd.AddCommand(
 		InstallCommand(),
 	)

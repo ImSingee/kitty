@@ -5,6 +5,11 @@ import (
 	"os/exec"
 )
 
+type G struct {
+	Dir string
+	Env []string
+}
+
 type Result struct {
 	Output []byte
 
@@ -25,9 +30,10 @@ func (r *Result) Err() error {
 	return nil
 }
 
-func run(dir string, args ...string) *Result {
+func (g *G) Run(args ...string) *Result {
 	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
+	cmd.Dir = g.Dir
+	cmd.Env = g.Env
 	output, err := cmd.Output()
 
 	result := &Result{
@@ -46,6 +52,10 @@ func run(dir string, args ...string) *Result {
 	}
 
 	return result
+}
+
+func run(dir string, args ...string) *Result {
+	return (&G{Dir: dir}).Run(args...)
 }
 
 func R(wd string, args []string) *Result {

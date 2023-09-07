@@ -11,13 +11,13 @@ type FileStatus struct {
 	RenameFrom        string // only exists for rename
 }
 
-func Status(dir string, allowSubmodule bool) ([]FileStatus, error) {
+func (g *G) Status(allowSubmodule bool) ([]FileStatus, error) {
 	args := []string{"status", "--porcelain"}
 	if !allowSubmodule {
 		args = append([]string{"-c", "submodule.recurse=false"}, args...)
 	}
 
-	result := R(dir, args)
+	result := g.Run(args...)
 	output := result.Output
 	err := result.Err()
 
@@ -26,6 +26,10 @@ func Status(dir string, allowSubmodule bool) ([]FileStatus, error) {
 	}
 
 	return parseStatus(string(output))
+}
+
+func Status(dir string, allowSubmodule bool) ([]FileStatus, error) {
+	return (&G{Dir: dir}).Status(allowSubmodule)
 }
 
 func parseStatus(status string) ([]FileStatus, error) {

@@ -30,13 +30,27 @@ func ReadKittyConfig(filename string) (map[string]gson.JSON, error) {
 // GetKittyConfig will find the kitty config file in the given directory
 //
 // if dir is empty, it will use the current working directory
-// if no config file found, it will return an error wrapped os.ErrNotExist, use ee.Is to check
+// if no config file found, it will return an error wrapped ErrNotExist, use IsNotExist to check
 func GetKittyConfig(dir string) (map[string]gson.JSON, error) {
+	filename, c, err := getKittyConfig(dir)
+	if err != nil {
+		return nil, err
+	}
+	if filename == "" {
+		return nil, ee.Wrap(ErrNotExist, "cannot find kitty config file")
+	}
+
+	return c, nil
+}
+
+// TODO report error if there's more than one config
+
+func getKittyConfig(dir string) (string, map[string]gson.JSON, error) {
 	if dir == "" {
 		var err error
 		dir, err = os.Getwd()
 		if err != nil {
-			return nil, fmt.Errorf("cannot get working directory: %w", err)
+			return "", nil, fmt.Errorf("cannot get working directory: %w", err)
 		}
 	}
 
@@ -48,11 +62,35 @@ func GetKittyConfig(dir string) (map[string]gson.JSON, error) {
 				continue
 			}
 
-			return nil, fmt.Errorf("cannot read kitty config file %s: %w", filename, err)
+			return filename, nil, fmt.Errorf("cannot read kitty config file %s: %w", filename, err)
 		}
 
-		return c, nil
+		return filename, c, nil
 	}
 
-	return nil, ee.Wrap(os.ErrNotExist, "cannot find kitty config file")
+	return "", nil, nil
+}
+
+func PatchKittyConfig(dir string, patch func(map[string]gson.JSON) error) error {
+	filename, c, err := getKittyConfig(dir)
+	if err != nil {
+		return err
+	}
+
+	if filename == "" { // config not exist, generate one
+		filename = filepath.Join(dir, ConfigFileNames[0])
+		c = make(map[string]gson.JSON)
+	}
+
+	err = patch(c)
+	if err != nil {
+		return err
+	}
+
+	err = exjson.Save(c, filename)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
