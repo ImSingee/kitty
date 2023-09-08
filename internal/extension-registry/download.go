@@ -45,7 +45,7 @@ func GetApp(app string) (*App, error) {
 		return nil, ee.Wrap(err, "cannot get registry")
 	}
 
-	urlForApp, err := url.JoinPath(r, app, "manifest.json")
+	urlForApp, err := url.JoinPath(r, "apps", app, "manifest.json")
 	if err != nil {
 		return nil, ee.Wrapf(err, "cannot generate manifest url for app (registry = %s)", r)
 	}
@@ -81,7 +81,7 @@ func getAppFromUrl(name string, url string) (*App, error) {
 }
 
 const KittyRegistryEnv = "KITTY_REGISTRY"
-const DefaultKittyRegistry = "https://raw.githubusercontent.com/ImSingee/kitty-registry/master/apps/"
+const DefaultKittyRegistry = "https://raw.githubusercontent.com/ImSingee/kitty-registry/master/"
 
 func GetRegistry() (string, error) {
 	// from environment variable
