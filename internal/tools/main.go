@@ -5,7 +5,7 @@ import "github.com/spf13/cobra"
 func Commands() []*cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "tools",
-		Aliases: []string{"tool"},
+		Aliases: []string{"tool", "t"},
 	}
 
 	// kitty tools install 自动安装尚未安装/版本不匹配的 tools
