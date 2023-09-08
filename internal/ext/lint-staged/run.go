@@ -32,7 +32,7 @@ func runAll(options *Options) (*State, error) {
 		return nil, ee.Wrap(err, "cannot get current working directory")
 	}
 
-	ctx := getInitialState(options)
+	ctx := getInitialState(cwd, options)
 
 	gitDir, gitConfigDir, err := resolveGitRepo(cwd)
 	if err != nil || gitDir == "" {
@@ -40,6 +40,7 @@ func runAll(options *Options) (*State, error) {
 		pp.ERedPrintln(x, "Current directory is not a git directory!")
 		return ctx, ee.Phantom
 	}
+	ctx.gitRoot = gitDir
 
 	// Test whether we have any commits or not.
 	// Stashing must be disabled with no initial commit.
@@ -288,8 +289,14 @@ func generateTasksToRun(ctx *State, config map[*Config][]string, options *Option
 	}
 
 	return mr.Map(all, func(in *ConfigEntries, index int) *tl.Task {
+		configPath := in.Config.Path
+
+		if relativeConfigPath, _ := filepath.Rel(ctx.wd, configPath); relativeConfigPath != "" {
+			configPath = relativeConfigPath
+		}
+
 		return &tl.Task{
-			Title: in.Config.Path + symGray(fmt.Sprintf(" - %d files", len(in.Filenames))),
+			Title: configPath + symGray(fmt.Sprintf(" - %d files", len(in.Filenames))),
 			Run: func(callback tl.TaskCallback) error {
 				callback.AddSubTask(in.Tasks...)
 				return nil

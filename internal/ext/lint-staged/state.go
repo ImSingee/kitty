@@ -7,6 +7,8 @@ import (
 )
 
 type State struct {
+	wd           string
+	gitRoot      string
 	shouldBackup bool
 
 	hasPartiallyStagedFiles bool
@@ -25,8 +27,9 @@ type TaskResult struct {
 	err                error
 }
 
-func getInitialState(options *Options) *State {
+func getInitialState(wd string, options *Options) *State {
 	return &State{
+		wd:                      wd,
 		hasPartiallyStagedFiles: false,
 		taskResults:             &sync.Map{},
 		errors:                  set.New[error](),
