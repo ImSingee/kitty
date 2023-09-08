@@ -335,7 +335,7 @@ func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string, opti
 		return strings.HasPrefix(in, wd+string(filepath.Separator))
 	})
 	files = mr.Filter(files, func(in string, index int) bool {
-		return glob.Match(rule.Glob, filepath.Base(in))
+		return glob.Match(rule.GlobString, rule.Glob, in)
 	})
 
 	suffix := fmt.Sprintf(" - %d files", len(files))
@@ -348,7 +348,7 @@ func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string, opti
 	})
 
 	return &tl.Task{
-		Title: rule.Glob + symGray(suffix),
+		Title: rule.GlobString + symGray(suffix),
 		Run: func(callback tl.TaskCallback) error {
 			if len(files) == 0 {
 				callback.Skip("")

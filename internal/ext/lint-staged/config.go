@@ -15,6 +15,7 @@ import (
 	"github.com/ImSingee/go-ex/exstrings"
 	"github.com/ImSingee/go-ex/mr"
 	"github.com/ImSingee/go-ex/set"
+	"github.com/gobwas/glob"
 	"github.com/ysmood/gson"
 
 	"github.com/ImSingee/kitty/internal/config"
@@ -26,8 +27,9 @@ type Config struct {
 }
 
 type Rule struct {
-	Glob     string
-	Commands []*Command
+	Glob       glob.Glob
+	GlobString string
+	Commands   []*Command
 }
 
 type Command struct {
@@ -160,7 +162,7 @@ func loadConfig(file string) (*Config, error) {
 	}
 
 	sort.Slice(config.Rules, func(i, j int) bool {
-		return strings.Compare(config.Rules[i].Glob, config.Rules[j].Glob) < 0
+		return strings.Compare(config.Rules[i].GlobString, config.Rules[j].GlobString) < 0
 	})
 
 	return config, err
@@ -245,9 +247,16 @@ func numberOfLevels(p string) int {
 
 func parseConfigRuleEntry(key string, v gson.JSON) (*Rule, error) {
 	rule := &Rule{
-		Glob:     key,
-		Commands: nil,
+		Glob:       nil,
+		GlobString: key,
+		Commands:   nil,
 	}
+
+	g, err := glob.Compile(key)
+	if err != nil {
+		return nil, ee.Wrapf(err, "cannot parse glob pattern `%s`", key)
+	}
+	rule.Glob = g
 
 	switch vv := v.Val().(type) {
 	case nil:

@@ -4,13 +4,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ImSingee/go-ex/glob"
+	"github.com/gobwas/glob"
 )
 
-func Match(pattern, name string) bool {
+func Match(pattern string, g glob.Glob, name string) bool {
 	if strings.Contains(pattern, "/") {
-		return glob.Match(pattern, name)
+		return match(g, name)
 	} else {
-		return glob.Match(pattern, filepath.Base(name))
+		return match(g, filepath.Base(name))
 	}
+}
+
+func match(g glob.Glob, target string) bool {
+	return g.Match(target)
 }
