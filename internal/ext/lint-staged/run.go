@@ -401,9 +401,9 @@ func generateTaskForCommand(state *State, wd string, cmd *Command, onFiles []str
 				fileArgs = shells.Join(args)
 			}
 
-			args := cmd.execCommand + " " + fileArgs
+			fullCommandAndArgs := cmd.execCommand + " " + fileArgs
 
-			p := exec.Command(shell, "-c", args)
+			p := exec.Command(shell, "-c", fullCommandAndArgs)
 			p.Dir = wd
 
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -421,7 +421,7 @@ func generateTaskForCommand(state *State, wd string, cmd *Command, onFiles []str
 
 			result := &TaskResult{
 				cmd:                cmd,
-				fullCommandAndArgs: args,
+				fullCommandAndArgs: fullCommandAndArgs,
 				output:             output,
 				err:                err,
 			}
@@ -458,19 +458,25 @@ func printTaskResults(results *sync.Map, options *Options) {
 		output := exbytes.ToString(bytes.TrimSpace(result.output))
 		output = strings.ToValidUTF8(output, "\uFFFD")
 
-		if len(output) == 0 {
-			if success {
-				pp.GreenPrintf("%s %s success without output.\n", icon, cmd)
-			} else {
-				pp.RedPrintf("%s %s failed without output. (%v)\n", icon, cmd, result.err)
-			}
+		// print title
+		if success {
+			pp.GreenPrintf("%s %s success:\n", icon, cmd)
 		} else {
-			if success {
-				pp.GreenPrintf("%s %s:\n", icon, cmd)
-			} else {
-				pp.RedPrintf("%s %s:\n", icon, cmd)
-			}
+			pp.RedPrintf("%s %s failed:\n", icon, cmd)
+		}
 
+		// print full command
+		pp.Println(symGray(result.fullCommandAndArgs))
+
+		// print error
+		if result.err != nil {
+			pp.RedPrintf("Error: %v\n", result.err)
+		}
+
+		// print output
+		if len(output) == 0 {
+			pp.Println(symGray("no output"))
+		} else {
 			pp.Println(output)
 		}
 
