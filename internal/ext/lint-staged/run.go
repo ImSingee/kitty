@@ -15,6 +15,7 @@ import (
 
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/exbytes"
+	"github.com/ImSingee/go-ex/exlist"
 	"github.com/ImSingee/go-ex/mr"
 	"github.com/ImSingee/go-ex/pp"
 
@@ -369,15 +370,28 @@ func generateTaskForCommand(state *State, wd string, cmd *Command, onFiles []str
 
 			shell := options.Shell
 
+			// --prepend xxx
+
 			fileArgs := ""
 			if cmd.NoArgs {
 				// do nothing
 			} else if cmd.Absolute {
-				fileArgs = shells.Join(onFiles)
+				args := onFiles
+				if cmd.Prepend != "" {
+					args = mr.ZipFlat(exlist.Repeat(len(args), cmd.Prepend), args)
+				}
+
+				fileArgs = shells.Join(args)
 			} else {
-				fileArgs = shells.Join(mr.Map(onFiles, func(f string, index int) string {
+				args := mr.Map(onFiles, func(f string, index int) string {
 					return strings.TrimPrefix(f, wd+string(filepath.Separator))
-				}))
+				})
+
+				if cmd.Prepend != "" {
+					args = mr.ZipFlat(exlist.Repeat(len(args), cmd.Prepend), args)
+				}
+
+				fileArgs = shells.Join(args)
 			}
 
 			args := cmd.execCommand + " " + fileArgs

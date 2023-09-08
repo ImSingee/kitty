@@ -31,9 +31,11 @@ type Rule struct {
 }
 
 type Command struct {
-	Command  string // command show to user
+	Command string // command show to user
+
 	Absolute bool
 	NoArgs   bool
+	Prepend  string // prepend to each file
 
 	execCommand string // real command to execute
 }
@@ -297,6 +299,17 @@ func parseStringCommand(cmd string) (*Command, error) {
 			case strings.HasPrefix(cmd, "[noArgs]"):
 				result.NoArgs = true
 				cmd = strings.TrimPrefix(cmd, "[noArgs]")
+			case strings.HasPrefix(cmd, "[prepend ") || strings.HasPrefix(cmd, "[prepend="):
+				// find next ]
+				i := strings.Index(cmd, "]")
+				if i < 0 {
+					return nil, fmt.Errorf("command `%s` contains invalid prepend option", cmdIn)
+				}
+
+				prepend := strings.TrimSpace(cmd[len("[prepend "):i])
+				cmd = cmd[i+1:]
+
+				result.Prepend = prepend
 			default:
 				break loop
 			}
