@@ -35,6 +35,7 @@ type Rule struct {
 type Command struct {
 	Command string // command show to user
 
+	Dir      bool // use dir instead of file
 	Absolute bool
 	NoArgs   bool
 	Prepend  string // prepend to each file
@@ -302,6 +303,9 @@ func parseStringCommand(cmd string) (*Command, error) {
 	loop:
 		for {
 			switch {
+			case strings.HasPrefix(cmd, "[dir]"):
+				result.Dir = true
+				cmd = strings.TrimPrefix(cmd, "[dir]")
 			case strings.HasPrefix(cmd, "[absolute]"):
 				result.Absolute = true
 				cmd = strings.TrimPrefix(cmd, "[absolute]")
