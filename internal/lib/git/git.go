@@ -2,6 +2,7 @@ package git
 
 import (
 	"errors"
+	"fmt"
 	"os/exec"
 )
 
@@ -20,7 +21,7 @@ type Result struct {
 
 func (r *Result) Err() error {
 	if r.ExitErr != nil {
-		return r.ExitErr
+		return fmt.Errorf("%s %s", r.ExitErr.Error(), r.ExitErr.Stderr)
 	}
 
 	if r.UnknownErr != nil {
