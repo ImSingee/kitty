@@ -92,6 +92,13 @@ func runAll(options *Options) (*State, error) {
 		slog.Debug("Grouped staged files by config", "count", usedConfigsCount, "filesByConfig", debugFilesByConfig)
 	}
 
+	ctx.ignoreChecker, err = NewIgnoreChecker(gitDir)
+	if err != nil {
+		ctx.errors.Add(ErrIgnore)
+		pp.ERedPrintf("%s Cannot load ignore rules (%s)!\n", x, err.Error())
+		return ctx, ee.Phantom
+	}
+
 	chunkedFilenamesArray := chunkFiles(files.RelativePathsToGitRoot(), defaultMaxArgLength())
 	slog.Debug("Get chunked filenames arrays", "groupCount", len(chunkedFilenamesArray), "arrays", chunkedFilenamesArray)
 
@@ -328,6 +335,9 @@ func generateTasksForConfig(ctx *State, config *Config, files Files, options *Op
 func generateTaskForRule(ctx *State, wd string, rule *Rule, files Files, options *Options) *tl.Task {
 	files = mr.Filter(files, func(in *File, index int) bool {
 		return strings.HasPrefix(in.AbsolutePath(), wd+string(filepath.Separator))
+	})
+	files = mr.Filter(files, func(in *File, index int) bool {
+		return !ctx.ignoreChecker.ShouldIgnore(in.GitRelativePath())
 	})
 	files = mr.Filter(files, func(in *File, index int) bool {
 		// TODO the glob only support simple case now, will make it enhance

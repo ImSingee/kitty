@@ -10,6 +10,7 @@ var (
 	ErrGetBackupStash         = fmt.Errorf("get backup stash error")
 	ErrGetStagedFiles         = fmt.Errorf("get staged files error")
 	ErrGitRepo                = fmt.Errorf("git repo error")
+	ErrIgnore                 = fmt.Errorf("load ignore rules error")
 	ErrHideUnstagedChanges    = fmt.Errorf("hide unstaged changes error")
 	ErrInvalidOptions         = fmt.Errorf("invalid options")
 	ErrRestoreMergeStatus     = fmt.Errorf("restore merge status error")

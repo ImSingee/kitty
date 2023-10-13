@@ -159,7 +159,7 @@ If you really want to use kitty on Windows, PR is welcome.
 
 - [husky](https://github.com/typicode/husky/tree/main)
 - [lint-staged](https://github.com/okonet/lint-staged)
-- [go-gitignore](https://github.com/sabhiram/go-gitignore)
+- [go-git](https://github.com/go-git/go-git)
 
 ## License
 

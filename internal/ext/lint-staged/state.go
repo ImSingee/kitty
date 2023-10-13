@@ -13,6 +13,7 @@ type State struct {
 
 	hasPartiallyStagedFiles bool
 	taskResults             *sync.Map
+	ignoreChecker           *IgnoreChecker
 
 	output        []string // all outputs will print to stderr at end
 	errors        *set.Set[error]
