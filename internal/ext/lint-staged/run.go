@@ -61,17 +61,11 @@ func runAll(options *Options) (*State, error) {
 		ctx.errors.Add(ErrGetStagedFiles)
 		return ctx, ee.Wrap(err, "cannot get staged files")
 	}
+	slog.Debug("Loaded list of staged files in git", "files", relativeFiles)
 
-	slog.Debug("Loaded list of staged files in git (relative)", "files", relativeFiles)
-
-	absoluteFiles := mr.Map(relativeFiles, func(in string, _index int) string {
-		return normalizePath(filepath.Join(gitDir, in))
-	})
-
-	slog.Debug("Loaded list of staged files in git (absolute)", "files", absoluteFiles)
-
+	files := NewFiles(ctx, relativeFiles)
 	// If there are no files avoid executing any lint-staged logic
-	if len(absoluteFiles) == 0 {
+	if len(files) == 0 {
 		pp.BluePrintln(info, "No staged files found.")
 		return ctx, nil
 	}
@@ -86,19 +80,19 @@ func runAll(options *Options) (*State, error) {
 		return ctx, ee.New("no configuration found")
 	}
 
-	filesByConfig := groupFilesByConfig(foundConfigs, absoluteFiles)
+	filesByConfig := groupFilesByConfig(foundConfigs, files)
 	if debug() {
 		usedConfigsCount := len(filesByConfig)
 		debugFilesByConfig := make(map[string][]string, len(filesByConfig))
 
 		for c, cFiles := range filesByConfig {
-			debugFilesByConfig[c.Path] = cFiles
+			debugFilesByConfig[c.Path] = cFiles.GitRelativePaths()
 		}
 
 		slog.Debug("Grouped staged files by config", "count", usedConfigsCount, "filesByConfig", debugFilesByConfig)
 	}
 
-	chunkedFilenamesArray := chunkFiles(relativeFiles, defaultMaxArgLength())
+	chunkedFilenamesArray := chunkFiles(files.RelativePathsToGitRoot(), defaultMaxArgLength())
 	slog.Debug("Get chunked filenames arrays", "groupCount", len(chunkedFilenamesArray), "arrays", chunkedFilenamesArray)
 
 	gw := &gitWorkflow{
@@ -262,11 +256,11 @@ func runAll(options *Options) (*State, error) {
 	return ctx, err
 }
 
-func generateTasksToRun(ctx *State, config map[*Config][]string, options *Options) []*tl.Task {
+func generateTasksToRun(ctx *State, config map[*Config]Files, options *Options) []*tl.Task {
 	type ConfigEntries struct {
-		Config    *Config
-		Filenames []string
-		Tasks     []*tl.Task
+		Config *Config
+		Files  Files
+		Tasks  []*tl.Task
 	}
 
 	all := make([]*ConfigEntries, 0, len(config))
@@ -275,9 +269,9 @@ func generateTasksToRun(ctx *State, config map[*Config][]string, options *Option
 		tasks := generateTasksForConfig(ctx, config, files, options)
 
 		all = append(all, &ConfigEntries{
-			Config:    config,
-			Filenames: files,
-			Tasks:     tasks,
+			Config: config,
+			Files:  files,
+			Tasks:  tasks,
 		})
 	}
 
@@ -297,7 +291,7 @@ func generateTasksToRun(ctx *State, config map[*Config][]string, options *Option
 		}
 
 		return &tl.Task{
-			Title: configPath + symGray(fmt.Sprintf(" - %d files", len(in.Filenames))),
+			Title: configPath + symGray(fmt.Sprintf(" - %d files", len(in.Files))),
 			Run: func(callback tl.TaskCallback) error {
 				callback.AddSubTask(in.Tasks...)
 				return nil
@@ -306,7 +300,7 @@ func generateTasksToRun(ctx *State, config map[*Config][]string, options *Option
 	})
 }
 
-func generateTasksForConfig(ctx *State, config *Config, files []string, options *Options) []*tl.Task {
+func generateTasksForConfig(ctx *State, config *Config, files Files, options *Options) []*tl.Task {
 	type RuleConfigEntries struct {
 		Rule string
 	}
@@ -331,12 +325,13 @@ func generateTasksForConfig(ctx *State, config *Config, files []string, options 
 	})
 }
 
-func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string, options *Options) *tl.Task {
-	files = mr.Filter(files, func(in string, index int) bool {
-		return strings.HasPrefix(in, wd+string(filepath.Separator))
+func generateTaskForRule(ctx *State, wd string, rule *Rule, files Files, options *Options) *tl.Task {
+	files = mr.Filter(files, func(in *File, index int) bool {
+		return strings.HasPrefix(in.AbsolutePath(), wd+string(filepath.Separator))
 	})
-	files = mr.Filter(files, func(in string, index int) bool {
-		return glob.Match(rule.GlobString, rule.Glob, in)
+	files = mr.Filter(files, func(in *File, index int) bool {
+		// TODO the glob only support simple case now, will make it enhance
+		return glob.Match(rule.GlobString, rule.Glob, in.AbsolutePath())
 	})
 
 	suffix := fmt.Sprintf(" - %d files", len(files))
@@ -367,7 +362,7 @@ func generateTaskForRule(ctx *State, wd string, rule *Rule, files []string, opti
 	}
 }
 
-func generateTaskForCommand(state *State, wd string, cmd *Command, onFiles []string, options *Options) *tl.Task {
+func generateTaskForCommand(state *State, wd string, cmd *Command, onFiles Files, options *Options) *tl.Task {
 	return &tl.Task{
 		Title: cmd.Command + symGray(fmt.Sprintf(" - %d files", len(onFiles))),
 		Run: func(callback tl.TaskCallback) (err error) {
@@ -384,7 +379,7 @@ func generateTaskForCommand(state *State, wd string, cmd *Command, onFiles []str
 			if cmd.NoArgs {
 				// do nothing
 			} else if cmd.Absolute {
-				args := onFiles
+				args := onFiles.AbsolutePaths()
 
 				if cmd.Dir {
 					args = mr.Map(args, func(f string, index int) string {
@@ -399,7 +394,7 @@ func generateTaskForCommand(state *State, wd string, cmd *Command, onFiles []str
 
 				fileArgs = shells.Join(args)
 			} else {
-				args := onFiles
+				args := onFiles.AbsolutePaths()
 
 				if cmd.Dir {
 					args = mr.Map(args, func(f string, index int) string {

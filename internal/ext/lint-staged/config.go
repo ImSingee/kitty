@@ -14,7 +14,6 @@ import (
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/exstrings"
 	"github.com/ImSingee/go-ex/mr"
-	"github.com/ImSingee/go-ex/set"
 	"github.com/gobwas/glob"
 	"github.com/ysmood/gson"
 
@@ -364,24 +363,27 @@ func parseStringCommand(cmd string) (*Command, error) {
 }
 
 // groupFilesByConfig map file to specific (deepest level) config
-func groupFilesByConfig(configs []*Config, files []string) map[*Config][]string {
-	group := make(map[*Config][]string, len(configs))
+func groupFilesByConfig(configs []*Config, files Files) map[*Config]Files {
+	group := make(map[*Config]Files, len(configs))
 	if len(configs) == 1 {
 		group[configs[0]] = files
 		return group
 	}
 
-	filesSet := set.New(files...)
+	absolutePathMap := make(map[string]*File, len(files))
+	for _, file := range files {
+		absolutePathMap[file.AbsolutePath()] = file
+	}
 
 	for _, config := range configs {
 		d := filepath.Dir(config.Path) + string(filepath.Separator)
 
-		filesSet.Do(func(s string) {
-			if strings.HasPrefix(s, d) {
-				group[config] = append(group[config], s)
-				filesSet.Remove(s)
+		for absolutePath, file := range absolutePathMap {
+			if strings.HasPrefix(absolutePath, d) {
+				group[config] = append(group[config], file)
+				delete(absolutePathMap, absolutePath)
 			}
-		})
+		}
 	}
 
 	return group
