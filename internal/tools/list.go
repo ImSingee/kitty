@@ -33,7 +33,7 @@ func (o *listOptions) getCurrentToolsMap() (map[string]string, error) {
 
 	tools_ := c["tools"].Val()
 	if tools_ == nil {
-		return nil, nil
+		return map[string]string{}, nil
 	}
 	tools, ok := tools_.(map[string]any)
 	if !ok {
