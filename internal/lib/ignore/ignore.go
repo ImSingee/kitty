@@ -24,6 +24,9 @@ func NewMatcher(ps []Pattern) Matcher {
 // ReadPatterns read and parse ignoreFileNames recursively
 //
 // The result is in the ascending order of priority (last higher).
+//
+// WARNING: This is too slow in most casts.
+// You can use git to find the ignore files and use ParseIgnoreFiles to parse them.
 func ReadPatterns(root string, dirs []string, ignoreFileNames ...string) ([]Pattern, error) {
 	ps, err := readIgnoreFiles(root, dirs, ignoreFileNames...)
 	if err != nil {
@@ -89,5 +92,21 @@ func readIgnoreFile(root string, dirs []string, ignoreFile string) (ps []Pattern
 		ps = append(ps, gitignore.ParsePattern(s, dirs))
 	}
 
+	return
+}
+
+func ParsePatternFiles(root string, gitRelativePaths ...string) (ps []Pattern, err error) {
+	for _, filename := range gitRelativePaths {
+		parts := strings.Split(filename, "/")
+		dirs := parts[:len(parts)-1]
+		ignoreFile := parts[len(parts)-1]
+
+		subps, err := readIgnoreFile(root, dirs, ignoreFile)
+		if err != nil {
+			return nil, err
+		}
+
+		ps = append(ps, subps...)
+	}
 	return
 }

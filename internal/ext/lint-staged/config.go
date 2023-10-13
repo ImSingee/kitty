@@ -61,12 +61,12 @@ func searchConfigs(cwd, gitDir, configPath string) ([]*Config, error) {
 		return []*Config{config}, nil
 	}
 
-	cachedFiles, err := execGitZ([]string{"ls-files", "-z", "--full-name"}, gitDir)
+	cachedFiles, err := getCachedFiles(gitDir)
 	if err != nil {
 		return nil, ee.Wrap(err, "cannot get list of known files")
 	}
 
-	//otherFiles, err := execGitZ([]string{"ls-files", "-z", "--full-name", "--others", "--exclude-standard"}, gitDir)
+	//otherFiles, err := getUncommittedFiles(gitDir)
 	//if err != nil {
 	//	return nil, ee.Wrap(err, "cannot get list of uncommitted files")
 	//}

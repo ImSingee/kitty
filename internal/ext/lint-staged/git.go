@@ -125,3 +125,11 @@ func execGitZ(args []string, dir string) ([]string, error) {
 
 	return parseGitZOutput(lines), nil
 }
+
+func getCachedFiles(gitDir string) ([]string, error) {
+	return execGitZ([]string{"ls-files", "-z", "--full-name"}, gitDir)
+}
+
+func getUncommittedFiles(gitDir string) ([]string, error) {
+	return execGitZ([]string{"ls-files", "-z", "--full-name", "--others", "--exclude-standard"}, gitDir)
+}
