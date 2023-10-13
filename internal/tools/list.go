@@ -25,7 +25,7 @@ func (o *listOptions) getCurrentToolsMap() (map[string]string, error) {
 	c, err := config.GetKittyConfig("")
 	if err != nil {
 		if ee.Is(err, os.ErrNotExist) {
-			return nil, nil
+			return map[string]string{}, nil
 		} else {
 			return nil, err
 		}
