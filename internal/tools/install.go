@@ -182,7 +182,7 @@ func (o *installOneOptions) install() (*installResult, error) {
 		rel = filepath.Join("."+string(osKey), app.Name+"@"+version.Version)
 		dst := filepath.Join(".kitty", ".bin", rel)
 
-		err = version.DownloadTo(dst)
+		err = version.InstallTo(dst)
 		if err != nil {
 			return nil, ee.Wrapf(err, "cannot download %s@%s", app.Name, version.Version)
 		}
@@ -190,7 +190,7 @@ func (o *installOneOptions) install() (*installResult, error) {
 		rel = filepath.Join("."+string(osKey), app.Name+"@"+o.version)
 		dst := filepath.Join(".kitty", ".bin", rel)
 
-		err := app.DownloadUnknownVersionTo(o.version, dst)
+		err := app.InstallUnknownVersionTo(o.version, dst)
 		if err != nil {
 			return nil, ee.Wrapf(err, "cannot download %s@%s", app.Name, o.version)
 		}
