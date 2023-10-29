@@ -12,17 +12,8 @@ import (
 	"github.com/ImSingee/go-ex/pp"
 )
 
-type InstallOptions struct {
-	To           string
-	ShowProgress bool
-}
-
-type Installer interface {
-	Install(o *InstallOptions) error
-}
-
 func (a *App) InstallUnknownVersionTo(version string, dst string) error {
-	if a.TryGoInstall != "" {
+	if a.TryGoInstall != nil {
 		return goInstallTo(version, a.TryGoInstall, dst, true)
 	}
 
@@ -94,7 +85,10 @@ func tryInstall(dst string, showProgress bool, downloaders ...Installer) error {
 	}
 }
 
-func goInstallTo(version string, pkg string, dst string, showProgress bool) error {
+func goInstallTo(version string, goOptions GoInstallOptions, dst string, showProgress bool) error {
+
+	// pkg string
+
 	d, err := mkdirFor(dst)
 	if err != nil {
 		return err
