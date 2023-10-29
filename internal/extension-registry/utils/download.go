@@ -1,7 +1,6 @@
-package extregistry
+package erutils
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -10,37 +9,12 @@ import (
 	"github.com/ImSingee/go-ex/pp"
 )
 
-type distInstaller struct {
-	o BinOptions
-}
-
-func (d *distInstaller) Install(o *InstallOptions) error {
-	if err := d.o["error"].Val(); err != nil {
-		return fmt.Errorf("%v", err)
-	}
-
-	osKey := GetCurrentBinKey()
-	url := d.o[osKey].Val()
-
-	url := d.o["url"].Val()
-	if url == nil {
-		return ErrInstallerNotApplicable
-	}
-
-	urlString, ok := url.(string)
-	if !ok {
-		return ee.New("`url` key in bin options is not string")
-	}
-
-	return downloadFileTo(urlString, o.To, 0755, o.ShowProgress)
-}
-
-func downloadFileTo(url string, dst string, perm os.FileMode, showProgress bool) error {
-	if showProgress {
+func DownloadFileTo(url string, dst string, perm os.FileMode, showProgress bool) error {
+	if showProgress { // TODO progress bar
 		pp.Println("Download", url, "...")
 	}
 
-	_, err := mkdirFor(dst)
+	_, err := MkdirFor(dst)
 	if err != nil {
 		return err
 	}

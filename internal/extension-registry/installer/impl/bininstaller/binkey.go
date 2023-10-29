@@ -1,4 +1,4 @@
-package extregistry
+package bininstaller
 
 import "runtime"
 
