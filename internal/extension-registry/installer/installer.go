@@ -7,6 +7,7 @@ import (
 )
 
 type InstallOptions struct {
+	Version      string
 	To           string
 	ShowProgress bool
 }

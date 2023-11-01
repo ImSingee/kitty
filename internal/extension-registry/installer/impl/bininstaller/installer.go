@@ -13,17 +13,10 @@ func (Factory) Key() string {
 }
 
 func (Factory) GetInstaller(o eroptions.AnyOptions) (installer.Installer, error) {
-	urlObject := o[string(GetCurrentBinKey())].Val()
+	object := eroptions.Get(o, string(GetCurrentBinKey()))
+	maybeUrl := eroptions.RenameDollarKey(object, "url", false)["url"].Val()
 
-	url := ""
-	switch urlObject := urlObject.(type) {
-	case string:
-		url = urlObject
-	case map[string]any:
-		if u, ok := urlObject["url"].(string); ok {
-			url = u
-		}
-	}
+	url, _ := maybeUrl.(string)
 
 	if url == "" {
 		return nil, installer.ErrInstallerNotApplicable

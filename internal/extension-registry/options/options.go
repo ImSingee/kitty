@@ -12,11 +12,11 @@ func AsAnyOptions(s map[string]any) AnyOptions {
 	return gson.New(s).Map()
 }
 
-// AsAnyOptionsOrKey will convert the given value to AnyOptions.
+// AsAnyOptionsOrDollar will convert the given value to AnyOptions.
 //
 // If o is map[string]any, it will return AsAnyOptions(o),
-// or else, it will return AsAnyOptions(map[string]any{key: o})
-func AsAnyOptionsOrKey(o any, key string) AnyOptions {
+// or else, it will return AsAnyOptions(map[string]any{"$": o})
+func AsAnyOptionsOrDollar(o any) AnyOptions {
 	if o == nil {
 		return nil
 	}
@@ -25,9 +25,11 @@ func AsAnyOptionsOrKey(o any, key string) AnyOptions {
 		return AsAnyOptions(o)
 	}
 
-	return AsAnyOptions(map[string]any{
-		key: o,
-	})
+	return wrappedOptions(o)
+}
+
+func wrappedOptions(v any) AnyOptions {
+	return AsAnyOptions(map[string]any{"$": v})
 }
 
 // AsAnyOptionsOrError will convert the given value to AnyOptions.
@@ -61,4 +63,46 @@ func CastToError(o AnyOptions) error {
 	}
 
 	return nil
+}
+
+// RenameDollarKey
+// rename o["$"] to o[to]
+//
+// force: if true, will overwrite the existing o[to]
+// return: same object of o
+func RenameDollarKey(o AnyOptions, to string, force bool) AnyOptions {
+	if o == nil {
+		return nil
+	}
+
+	_, toExists := o[to]
+	if !toExists || force {
+		_, dollarExists := o["$"]
+		if dollarExists {
+			o[to] = o["$"]
+			delete(o, "$")
+		}
+	}
+
+	return o
+}
+
+// Exists return whether the key exists in o
+func Exists(o AnyOptions, key string) bool {
+	_, exists := o[key]
+	return exists
+}
+
+// Get key from o
+//
+// if the key is not found, return nil
+func Get(o AnyOptions, key string) AnyOptions {
+	switch v := o[key].Val().(type) {
+	case nil:
+		return nil
+	case map[string]any:
+		return AsAnyOptions(v)
+	default:
+		return wrappedOptions(v)
+	}
 }

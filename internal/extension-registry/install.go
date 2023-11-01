@@ -1,12 +1,6 @@
 package extregistry
 
 import (
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
-	"strings"
-
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/mr"
 	"github.com/ImSingee/go-ex/pp"
@@ -49,6 +43,8 @@ func (v *Version) downloadTo(dst string) error {
 }
 
 func (v *Version) downloaders() []Installer {
+	// TODO set version to options
+
 	return []Installer{
 		&distInstaller{v.Bin},
 	}
@@ -83,58 +79,4 @@ func tryInstall(dst string, showProgress bool, downloaders ...Installer) error {
 	} else {
 		return ee.New("all downloaders failed")
 	}
-}
-
-func goInstallTo(version string, goOptions GoInstallOptions, dst string, showProgress bool) error {
-
-	// pkg string
-
-	d, err := mkdirFor(dst)
-	if err != nil {
-		return err
-	}
-
-	pkgWithVersion := pkg
-	if !strings.Contains(pkg, "@") {
-		// append version to pkg
-		pkgWithVersion = pkg + "@" + normalizeGoVersion(version)
-	}
-
-	cmd := exec.Command("go", "install", pkgWithVersion)
-
-	cmd.Env = []string{"GOBIN=" + d}
-	cmd.Env = append(cmd.Env, os.Environ()...)
-
-	if showProgress {
-		pp.Println("go install", pkgWithVersion, "...")
-
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stdout
-	}
-
-	err = cmd.Run()
-	if err != nil {
-		return ee.Wrapf(err, "cannot install %s", pkgWithVersion)
-	}
-
-	// rename bin
-	goBinName := filepath.Join(d, goGetBinNameForPkg(pkg))
-	err = os.Rename(goBinName, dst)
-	if err != nil {
-		return ee.Wrapf(err, "cannot rename %s to %s", goBinName, dst)
-	}
-
-	return nil
-}
-
-func goGetBinNameForPkg(pkg string) string {
-	pkgWithoutVersion, _, _ := strings.Cut(pkg, "@")
-	species := strings.Split(pkgWithoutVersion, "/")
-	name := species[len(species)-1]
-
-	if runtime.GOOS == "windows" {
-		name += ".exe"
-	}
-
-	return name
 }
