@@ -14,6 +14,7 @@ import (
 
 	"github.com/ImSingee/kitty/internal/config"
 	extregistry "github.com/ImSingee/kitty/internal/extension-registry"
+	"github.com/ImSingee/kitty/internal/extension-registry/installer/impl/bininstaller"
 	"github.com/ImSingee/kitty/internal/lib/git"
 )
 
@@ -173,7 +174,7 @@ func (o *installOneOptions) install() (*installResult, error) {
 		result.version = version.Version
 	}
 
-	osKey := extregistry.GetCurrentBinKey()
+	osKey := bininstaller.GetCurrentBinKey()
 
 	// download to .bin/[system-key]/[name]@[version]
 	// TODO 安装到中央工具仓库（而不是 .bin 下）

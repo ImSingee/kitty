@@ -1,8 +1,14 @@
 package extregistry
 
-import "github.com/ImSingee/go-ex/ee"
+import (
+	"strings"
 
-func parseApp(name string, in AnyOptions) (*App, error) {
+	"github.com/ImSingee/go-ex/ee"
+
+	eroptions "github.com/ImSingee/kitty/internal/extension-registry/options"
+)
+
+func parseApp(name string, in eroptions.AnyOptions) (*App, error) {
 	a := &App{
 		Name: name,
 	}
@@ -38,24 +44,27 @@ func parseApp(name string, in AnyOptions) (*App, error) {
 			return nil, ee.Errorf("invalid `versions` key in app manifest")
 		}
 
-		parsedVersions := make(map[string]AnyOptions, len(versions))
+		parsedVersions := make(map[string]eroptions.AnyOptions, len(versions))
 
 		for version, v := range versions {
 			v, ok := v.(map[string]any)
 			if !ok {
-				parsedVersions[version] = asAnyOptions(map[string]any{
+				parsedVersions[version] = eroptions.AsAnyOptions(map[string]any{
 					"error": "invalid version value",
 				})
 			} else {
-				parsedVersions[version] = asAnyOptions(v)
+				parsedVersions[version] = eroptions.AsAnyOptions(v)
 			}
 		}
 	}
 
-	// parse try-go-install options
-	if tryGoInstall := in["try-go-install"].Val(); tryGoInstall != nil {
-		a.TryGoInstall = parseGoInstallOptions(tryGoInstall)
+	installOptions := eroptions.AnyOptions{}
+	for k, v := range in {
+		if strings.HasPrefix(k, "try-") {
+			installOptions[k[4:]] = v
+		}
 	}
+	a.InstallOptions = installOptions
 
 	return a, nil
 }
@@ -65,14 +74,14 @@ func (a *App) parseVersion(version string) (*Version, error) {
 	if !ok {
 		return nil, ee.Errorf("unknown version %s", version)
 	}
-	if err := vIn["error"].Val(); err != nil {
+
+	if err := eroptions.CastToError(vIn); err != nil {
 		return nil, ee.Errorf("version is invalid or unsupported in current kitty version")
 	}
 
 	return &Version{
-		App:       a,
-		Version:   version,
-		Bin:       parseBinOptions(vIn["bin"]),
-		GoInstall: parseGoInstallOptions(vIn["go-install"]),
+		App:            a,
+		Version:        version,
+		InstallOptions: vIn,
 	}, nil
 }
