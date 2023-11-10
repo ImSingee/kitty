@@ -170,28 +170,21 @@ func (o *installOneOptions) install() (*installResult, error) {
 	}
 
 	result := &installResult{version: o.version}
-	if version != nil {
-		result.version = version.Version
-	}
 
 	osKey := bininstaller.GetCurrentBinKey()
 
 	// download to .bin/[system-key]/[name]@[version]
-	// TODO 安装到中央工具仓库（而不是 .bin 下）
-	var rel string
-	if version != nil { // download for version
-		rel = filepath.Join("."+string(osKey), app.Name+"@"+version.Version)
-		dst := filepath.Join(".kitty", ".bin", rel)
+	rel := filepath.Join("."+string(osKey), app.Name+"@"+version.Version)
+	dst := filepath.Join(".kitty", ".bin", rel)
 
+	// TODO 安装到中央工具仓库（而不是 .bin 下）
+	if version.InstallOptions != nil { // download for version
 		err = version.InstallTo(dst)
 		if err != nil {
 			return nil, ee.Wrapf(err, "cannot download %s@%s", app.Name, version.Version)
 		}
 	} else { // download for unknown version
-		rel = filepath.Join("."+string(osKey), app.Name+"@"+o.version)
-		dst := filepath.Join(".kitty", ".bin", rel)
-
-		err := app.InstallUnknownVersionTo(o.version, dst)
+		err := version.InstallUnknownVersionTo(dst)
 		if err != nil {
 			return nil, ee.Wrapf(err, "cannot download %s@%s", app.Name, o.version)
 		}

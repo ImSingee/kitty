@@ -12,8 +12,6 @@ import (
 )
 
 // GetAppVersion will get the app and version from registry
-//
-// the returned version may be empty
 func GetAppVersion(app string, version string) (*App, *Version, error) {
 	a, err := GetApp(app)
 	if err != nil {
@@ -27,7 +25,12 @@ func GetAppVersion(app string, version string) (*App, *Version, error) {
 	v, err := a.parseVersion(version)
 	if err != nil {
 		if ee.Is(err, ErrVersionNotExist) {
-			return a, nil, nil
+			v := &Version{
+				App:     a,
+				Version: version,
+			}
+
+			return a, v, nil
 		}
 
 		return a, nil, ee.Wrapf(err, "cannot parse version %s of app %s", version, app)

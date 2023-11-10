@@ -12,7 +12,7 @@ import (
 	eroptions "github.com/ImSingee/kitty/internal/extension-registry/options"
 )
 
-func (a *App) InstallUnknownVersionTo(version string, dst string) error {
+func (a *App) installUnknownVersionTo(version string, dst string) error {
 	o := &installer.InstallOptions{
 		Version:      version,
 		To:           dst,
@@ -29,6 +29,10 @@ func (a *App) InstallUnknownVersionTo(version string, dst string) error {
 	}
 
 	return nil
+}
+
+func (v *Version) InstallUnknownVersionTo(dst string) error {
+	return v.App.installUnknownVersionTo(v.Version, dst)
 }
 
 func (v *Version) InstallTo(dst string) error {
