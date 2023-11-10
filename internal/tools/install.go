@@ -169,7 +169,7 @@ func (o *installOneOptions) install() (*installResult, error) {
 		return nil, err
 	}
 
-	result := &installResult{version: o.version}
+	result := &installResult{version: version.Version}
 
 	osKey := binkey.GetCurrentBinKey()
 
