@@ -1,6 +1,7 @@
 package bininstaller
 
 import (
+	"github.com/ImSingee/kitty/internal/extension-registry/binkey"
 	"github.com/ImSingee/kitty/internal/extension-registry/installer"
 	eroptions "github.com/ImSingee/kitty/internal/extension-registry/options"
 	erutils "github.com/ImSingee/kitty/internal/extension-registry/utils"
@@ -13,7 +14,7 @@ func (Factory) Key() string {
 }
 
 func (Factory) GetInstaller(o eroptions.AnyOptions) (installer.Installer, error) {
-	object := eroptions.Get(o, string(GetCurrentBinKey()))
+	object := eroptions.Get(o, string(binkey.GetCurrentBinKey()))
 	maybeUrl := eroptions.RenameDollarKey(object, "url", false)["url"].Val()
 
 	url, _ := maybeUrl.(string)

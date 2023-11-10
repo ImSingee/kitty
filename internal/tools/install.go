@@ -14,7 +14,7 @@ import (
 
 	"github.com/ImSingee/kitty/internal/config"
 	extregistry "github.com/ImSingee/kitty/internal/extension-registry"
-	"github.com/ImSingee/kitty/internal/extension-registry/installer/impl/bininstaller"
+	"github.com/ImSingee/kitty/internal/extension-registry/binkey"
 	"github.com/ImSingee/kitty/internal/lib/git"
 )
 
@@ -171,7 +171,7 @@ func (o *installOneOptions) install() (*installResult, error) {
 
 	result := &installResult{version: o.version}
 
-	osKey := bininstaller.GetCurrentBinKey()
+	osKey := binkey.GetCurrentBinKey()
 
 	// download to .bin/[system-key]/[name]@[version]
 	rel := filepath.Join("."+string(osKey), app.Name+"@"+version.Version)

@@ -1,4 +1,4 @@
-package bininstaller
+package binkey
 
 import "runtime"
 
