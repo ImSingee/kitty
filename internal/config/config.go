@@ -12,8 +12,8 @@ import (
 )
 
 var ConfigFileNames = []string{
-	".kittyrc",
 	".kittyrc.json",
+	".kittyrc",
 	"kitty.config.json",
 }
 
