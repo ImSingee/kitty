@@ -106,3 +106,27 @@ func Get(o AnyOptions, key string) AnyOptions {
 		return wrappedOptions(v)
 	}
 }
+
+// Merge two AnyOptions, return a new merged object
+//
+// override: if there's same key in o and with, whether to override it (make o[key] = with[key])
+func Merge(o AnyOptions, with AnyOptions, override bool) AnyOptions {
+	result := make(AnyOptions)
+	for k, v := range o {
+		result[k] = v
+	}
+
+	if override {
+		for k, v := range with {
+			result[k] = v
+		}
+	} else {
+		for k, v := range with {
+			if _, exists := result[k]; !exists {
+				result[k] = v
+			}
+		}
+	}
+
+	return result
+}

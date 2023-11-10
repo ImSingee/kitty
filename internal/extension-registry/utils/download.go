@@ -9,14 +9,9 @@ import (
 	"github.com/ImSingee/go-ex/pp"
 )
 
-func DownloadFileTo(url string, dst string, perm os.FileMode, showProgress bool) error {
+func downloadFileTo(url string, w io.Writer, showProgress bool) error {
 	if showProgress { // TODO progress bar
 		pp.Println("Download", url, "...")
-	}
-
-	_, err := MkdirFor(dst)
-	if err != nil {
-		return err
 	}
 
 	resp, err := http.Get(url)
@@ -29,17 +24,30 @@ func DownloadFileTo(url string, dst string, perm os.FileMode, showProgress bool)
 		return ee.Errorf("cannot download file from %s: status code = %d", url, resp.StatusCode)
 	}
 
-	_ = os.Remove(dst)
+	_, err = io.Copy(w, resp.Body)
+	if err != nil {
+		return ee.Wrap(err, "cannot write data")
+	}
 
+	return nil
+}
+
+func DownloadFileTo(url string, dst string, perm os.FileMode, showProgress bool) error {
+	_, err := MkdirFor(dst)
+	if err != nil {
+		return err
+	}
+
+	_ = os.Remove(dst)
 	f, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm)
 	if err != nil {
 		return ee.Wrapf(err, "cannot create file %s", dst)
 	}
 	defer f.Close()
 
-	_, err = io.Copy(f, resp.Body)
+	err = downloadFileTo(url, f, showProgress)
 	if err != nil {
-		return ee.Wrapf(err, "cannot write data to %s", dst)
+		return ee.Wrapf(err, "cannot download file to %s", dst)
 	}
 
 	err = f.Close()
@@ -48,4 +56,24 @@ func DownloadFileTo(url string, dst string, perm os.FileMode, showProgress bool)
 	}
 
 	return nil
+}
+
+func DownloadFileToTemp(url string, temppattern string, showProgress bool) (string, error) {
+	f, err := os.CreateTemp("", temppattern)
+	if err != nil {
+		return "", ee.Wrap(err, "cannot create temp file")
+	}
+	defer f.Close()
+
+	err = downloadFileTo(url, f, showProgress)
+	if err != nil {
+		return "", ee.Wrap(err, "cannot download file to [tempfile]")
+	}
+
+	err = f.Close()
+	if err != nil {
+		return "", ee.Wrap(err, "cannot save and close file [tempfile]")
+	}
+
+	return f.Name(), nil
 }
