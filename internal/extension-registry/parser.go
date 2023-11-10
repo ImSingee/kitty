@@ -1,6 +1,7 @@
 package extregistry
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/ImSingee/go-ex/ee"
@@ -69,10 +70,12 @@ func parseApp(name string, in eroptions.AnyOptions) (*App, error) {
 	return a, nil
 }
 
+var ErrVersionNotExist = fmt.Errorf("version not exist")
+
 func (a *App) parseVersion(version string) (*Version, error) {
 	vIn, ok := a.Versions[version]
 	if !ok {
-		return nil, ee.Errorf("unknown version %s", version)
+		return nil, ee.Wrapf(ErrVersionNotExist, "unknown version %s", version)
 	}
 
 	if err := eroptions.CastToError(vIn); err != nil {

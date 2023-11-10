@@ -26,6 +26,10 @@ func GetAppVersion(app string, version string) (*App, *Version, error) {
 
 	v, err := a.parseVersion(version)
 	if err != nil {
+		if ee.Is(err, ErrVersionNotExist) {
+			return a, nil, nil
+		}
+
 		return a, nil, ee.Wrapf(err, "cannot parse version %s of app %s", version, app)
 	}
 
