@@ -2,6 +2,7 @@ package erutils
 
 import (
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -65,6 +66,7 @@ func DownloadFileToTemp(url string, temppattern string, showProgress bool) (stri
 	}
 	defer f.Close()
 
+	slog.Debug("DownloadFileToTemp", "url", url, "to", f.Name())
 	err = downloadFileTo(url, f, showProgress)
 	if err != nil {
 		return "", ee.Wrap(err, "cannot download file to [tempfile]")

@@ -9,8 +9,9 @@ import (
 
 	"github.com/ImSingee/kitty/internal/extension-registry/installer"
 	"github.com/ImSingee/kitty/internal/extension-registry/installer/impl/bininstaller"
+	"github.com/ImSingee/kitty/internal/extension-registry/installer/impl/bininstaller/tarinstaller"
+	"github.com/ImSingee/kitty/internal/extension-registry/installer/impl/bininstaller/zipinstaller"
 	"github.com/ImSingee/kitty/internal/extension-registry/installer/impl/goinstaller"
-	"github.com/ImSingee/kitty/internal/extension-registry/installer/impl/zipinstaller"
 	eroptions "github.com/ImSingee/kitty/internal/extension-registry/options"
 )
 
@@ -109,6 +110,7 @@ func factoryIdl(factory installer.Factory) idl {
 var installers = []idl{
 	factoryIdl(&bininstaller.Factory{}),
 	factoryIdl(&zipinstaller.Factory{}),
+	factoryIdl(&tarinstaller.Factory{}),
 	factoryIdl(&goinstaller.Factory{}),
 }
 
