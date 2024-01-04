@@ -19,6 +19,7 @@ import (
 	"github.com/ImSingee/kitty/internal/lib/git"
 	"github.com/ImSingee/kitty/internal/lib/xlog"
 	"github.com/ImSingee/kitty/internal/tools"
+	"github.com/ImSingee/kitty/internal/version"
 
 	_ "embed"
 )
@@ -34,7 +35,7 @@ func main() {
 	app := &cobra.Command{
 		Use:           "kitty [@extension]",
 		Long:          help,
-		Version:       getVersionString(),
+		Version:       version.GetVersionString(),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
