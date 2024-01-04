@@ -2,6 +2,7 @@ package extregistry
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/pp"
@@ -14,6 +15,7 @@ import (
 )
 
 func (a *App) installUnknownVersionTo(version string, dst string) error {
+	slog.Debug("app installUnknownVersionTo", "version", version, "dst", dst)
 	o := &installer.InstallOptions{
 		Version:      version,
 		To:           dst,
@@ -33,10 +35,12 @@ func (a *App) installUnknownVersionTo(version string, dst string) error {
 }
 
 func (v *Version) InstallUnknownVersionTo(dst string) error {
+	slog.Debug("version installUnknownVersionTo", "dst", dst)
 	return v.App.installUnknownVersionTo(v.Version, dst)
 }
 
 func (v *Version) InstallTo(dst string) error {
+	slog.Debug("version InstallTo", "version", v, "dst", dst)
 	o := &installer.InstallOptions{
 		Version:      v.Version,
 		To:           dst,

@@ -1,6 +1,7 @@
 package extregistry
 
 import (
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,16 +14,21 @@ import (
 
 // GetAppVersion will get the app and version from registry
 func GetAppVersion(app string, version string) (*App, *Version, error) {
+	slog.Debug("GetAppVersion", "app", app, "version", version)
 	a, err := GetApp(app)
 	if err != nil {
 		return nil, nil, ee.Wrapf(err, "cannot get app %s from registry", app)
 	}
+	slog.Debug("GetApp", "app", app, "parsed", a)
 
 	if realVersion := a.Tags[version]; realVersion != "" {
+		slog.Debug("map tag version", "previous", version, "to", realVersion)
+
 		version = realVersion
 	}
 
 	v, err := a.parseVersion(version)
+	slog.Debug("parse version", "version", version, "parsed", v)
 	if err != nil {
 		if ee.Is(err, ErrVersionNotExist) {
 			v := &Version{

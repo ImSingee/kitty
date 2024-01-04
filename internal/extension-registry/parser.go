@@ -2,6 +2,7 @@ package extregistry
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/ImSingee/go-ex/ee"
@@ -10,6 +11,8 @@ import (
 )
 
 func parseApp(name string, in eroptions.AnyOptions) (*App, error) {
+	slog.Debug("parseApp", "in", in)
+
 	a := &App{
 		Name: name,
 	}
@@ -48,6 +51,8 @@ func parseApp(name string, in eroptions.AnyOptions) (*App, error) {
 		parsedVersions := make(map[string]eroptions.AnyOptions, len(versions))
 
 		for version, v := range versions {
+			slog.Debug("parseVersion", "in", v)
+
 			v, ok := v.(map[string]any)
 			if !ok {
 				parsedVersions[version] = eroptions.AsAnyOptions(map[string]any{
@@ -57,6 +62,8 @@ func parseApp(name string, in eroptions.AnyOptions) (*App, error) {
 				parsedVersions[version] = eroptions.AsAnyOptions(v)
 			}
 		}
+
+		a.Versions = parsedVersions
 	}
 
 	installOptions := eroptions.AnyOptions{}
@@ -66,6 +73,8 @@ func parseApp(name string, in eroptions.AnyOptions) (*App, error) {
 		}
 	}
 	a.InstallOptions = installOptions
+
+	slog.Debug("parseApp", "parsed", a)
 
 	return a, nil
 }
