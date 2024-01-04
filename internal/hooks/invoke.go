@@ -1,8 +1,7 @@
 package hooks
 
 import (
-	"fmt"
-
+	"github.com/ImSingee/go-ex/pp"
 	"github.com/spf13/cobra"
 
 	"github.com/ImSingee/kitty/internal/lib/shells"
@@ -32,10 +31,10 @@ func InvokeCommand() *cobra.Command {
 func (o *invokeOptions) invokeWrapper() {
 	output, success := o.invoke()
 	if output != "" {
-		fmt.Println(`echo ` + shells.Quote(output))
+		pp.Println(`echo ` + shells.Quote(output))
 	}
 	if !success {
-		fmt.Println("exit 1")
+		pp.Println("exit 1")
 	}
 }
 
@@ -44,6 +43,6 @@ func (o *invokeOptions) invoke() (output string, success bool) {
 		return "Your kitty version is too low, please upgrade", false
 	}
 
-	//fmt.Println(`export KITTY_VERSION=` + version) // TODO
+	//pp.Println(`export KITTY_VERSION=` + version) // TODO
 	return "", true
 }

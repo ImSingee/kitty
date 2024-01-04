@@ -467,7 +467,7 @@ func printTaskResults(results *sync.Map, options *Options) {
 		}
 
 		if !anyResult { // first print
-			fmt.Println()
+			pp.Println()
 			anyResult = true
 		}
 
@@ -507,6 +507,6 @@ func printTaskResults(results *sync.Map, options *Options) {
 	})
 
 	if anyResult {
-		fmt.Println()
+		pp.Println()
 	}
 }

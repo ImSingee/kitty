@@ -77,6 +77,8 @@ func main() {
 	app.PersistentFlags().StringP("root", "R", "", "change command working directory")
 	app.PersistentFlags().BoolVar(&config.Debug, "debug", false, "print additional debug information")
 	app.PersistentFlags().BoolP("quiet", "q", false, "quiet mode (hide any output)")
+
+	// pre-run
 	app.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		quiet, _ := cmd.Flags().GetBool("quiet")
 		if quiet {
