@@ -1,6 +1,7 @@
 package tmpl
 
 import (
+	"runtime"
 	"strings"
 	"text/template"
 
@@ -33,5 +34,7 @@ func toTemplateOptions(options *installer.InstallOptions) map[string]interface{}
 	return map[string]interface{}{
 		"version": options.Version,
 		"semver":  v,
+		"os":      runtime.GOOS,
+		"arch":    runtime.GOARCH,
 	}
 }
