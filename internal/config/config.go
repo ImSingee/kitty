@@ -73,7 +73,7 @@ func getKittyConfig(dir string) (string, map[string]gson.JSON, error) {
 	return "", nil, nil
 }
 
-func PatchKittyConfig(dir string, patch func(map[string]gson.JSON) error) error {
+func PatchKittyConfig(dir string, patch func(map[string]gson.JSON) (save bool, err error)) error {
 	filename, c, err := getKittyConfig(dir)
 	if err != nil {
 		return err
@@ -84,14 +84,16 @@ func PatchKittyConfig(dir string, patch func(map[string]gson.JSON) error) error 
 		c = make(map[string]gson.JSON)
 	}
 
-	err = patch(c)
+	save, err := patch(c)
 	if err != nil {
 		return err
 	}
 
-	err = saveKittyConfig(filename, c)
-	if err != nil {
-		return err
+	if save {
+		err = saveKittyConfig(filename, c)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

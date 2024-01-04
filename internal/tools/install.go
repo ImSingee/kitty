@@ -141,9 +141,14 @@ func (o *installOptions) install() error {
 }
 
 func (o *installOptions) writeToolsInfo(tools map[string]string) error {
-	return config.PatchKittyConfig("", func(c map[string]gson.JSON) error {
+	return config.PatchKittyConfig("", func(c map[string]gson.JSON) (save bool, err error) {
+		// if c["tools"] not exist and tools is empty, do nothing
+		if _, toolsKeyExist := c["tools"]; !toolsKeyExist && len(tools) == 0 {
+			return false, nil
+		}
+
 		c["tools"] = gson.New(tools)
-		return nil
+		return true, nil
 	})
 }
 
