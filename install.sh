@@ -66,4 +66,4 @@ fi
 # Run the kitty install command
 if [ -d ".git" ]; then
   run_kitty_install
-else
+fi
