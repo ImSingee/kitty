@@ -58,8 +58,7 @@ func goInstallTo(pkg, version string, dst string, showProgress bool) error {
 
 	cmd := exec.Command("go", "install", pkgWithVersion)
 
-	cmd.Env = []string{"GOBIN=" + d}
-	cmd.Env = append(cmd.Env, os.Environ()...)
+	cmd.Env = append(copyEnvWithoutGOBIN(), "GOBIN="+d)
 
 	if showProgress {
 		pp.Println("go install", pkgWithVersion, "...")
@@ -105,4 +104,19 @@ func goGetBinNameForPkg(pkg string) string {
 	}
 
 	return name
+}
+
+func copyEnvWithoutGOBIN() []string {
+	env := os.Environ()
+	copied := make([]string, 0, len(env))
+
+	for _, e := range env {
+		if strings.HasPrefix(e, "GOBIN=") {
+			continue
+		}
+
+		copied = append(copied, e)
+	}
+
+	return copied
 }
