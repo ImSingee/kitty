@@ -20,6 +20,7 @@ type gitWorkflow struct {
 	allowEmpty            bool
 	diff                  string
 	diffFilter            string
+	breakReason           string
 	logger                *slog.Logger
 
 	partiallyStagedFiles []string
@@ -58,6 +59,10 @@ var gitDiffArgs = []string{
 	"--submodule=short", // always use the default short format for submodules
 }
 var gitApplyArgs = []string{"-v", "--whitespace=nowarn", "--recount", "--unidiff-zero"}
+
+func (g *gitWorkflow) prepareOK() (bool, string) {
+	return g.breakReason != "", g.breakReason
+}
 
 // Create a diff of partially staged files and backup stash if enabled.
 //
@@ -109,6 +114,12 @@ func (g *gitWorkflow) prepare(state *State) (err error) {
 		if err != nil {
 			return ee.Wrap(err, "cannot create stash")
 		}
+
+		if hash == "" {
+			g.breakReason = "workspace is clean"
+			return nil
+		}
+
 		_, err = g.execGit("stash", "store", "--quiet", "--message", stashMessage, hash)
 		if err != nil {
 			return ee.Wrap(err, "cannot save stash")

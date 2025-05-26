@@ -16,6 +16,9 @@ type Task struct {
 	PostRun func(result *Result)
 	Enable  func() bool
 
+	// BreakFlow return true interrupts flow execution
+	BreakFlow func() (shouldBreak bool, reason string)
+
 	Options []OptionApplier
 
 	id string

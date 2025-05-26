@@ -139,7 +139,8 @@ func runAll(options *Options) (*State, error) {
 			Run: func(callback tl.TaskCallback) error {
 				return gw.prepare(ctx)
 			},
-			PostRun: handleInternalError,
+			PostRun:   handleInternalError,
+			BreakFlow: gw.prepareOK,
 		},
 		{
 			Title: "Hiding unstaged changes to partially staged files...",
