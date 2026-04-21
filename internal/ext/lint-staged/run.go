@@ -49,24 +49,24 @@ func runAll(options *Options) (*State, error) {
 	hasInitialCommit := err == nil
 
 	// Lint-staged will create a backup stash only when there's an initial commit,
-	// and when using the default list of staged files by default
-	ctx.shouldBackup = hasInitialCommit && options.Stash
+	// and when using the default staged-file selection.
+	ctx.shouldBackup = hasInitialCommit && options.Stash && options.UsesIndex()
 	if !ctx.shouldBackup {
-		pp.EYellowPrintln(skippingBackup(hasInitialCommit, options.Diff))
+		pp.EYellowPrintln(skippingBackup(hasInitialCommit, options))
 	}
 
-	// get staged files (relative path)
-	relativeFiles, err := getStagedFiles(options, gitDir)
+	// get selected files (relative path)
+	relativeFiles, err := getSelectedFiles(options, gitDir)
 	if err != nil {
-		ctx.errors.Add(ErrGetStagedFiles)
-		return ctx, ee.Wrap(err, "cannot get staged files")
+		ctx.errors.Add(ErrGetSelectedFiles)
+		return ctx, ee.Wrap(err, "cannot get selected files")
 	}
-	slog.Debug("Loaded list of staged files in git", "files", relativeFiles)
+	slog.Debug("Loaded selected files in git", "files", relativeFiles, "label", options.SelectedFilesLabel())
 
 	files := NewFiles(ctx, relativeFiles)
 	// If there are no files avoid executing any lint-staged logic
 	if len(files) == 0 {
-		pp.BluePrintln(info, "No staged files found.")
+		pp.BluePrintln(info, "No "+options.SelectedFilesLabel()+" found.")
 		return ctx, nil
 	}
 
@@ -89,7 +89,7 @@ func runAll(options *Options) (*State, error) {
 			debugFilesByConfig[c.Path] = cFiles.GitRelativePaths()
 		}
 
-		slog.Debug("Grouped staged files by config", "count", usedConfigsCount, "filesByConfig", debugFilesByConfig)
+		slog.Debug("Grouped selected files by config", "count", usedConfigsCount, "filesByConfig", debugFilesByConfig)
 	}
 
 	ctx.ignoreChecker, err = NewIgnoreChecker(gitDir)
@@ -109,6 +109,7 @@ func runAll(options *Options) (*State, error) {
 		allowEmpty:            options.AllowEmpty,
 		diff:                  options.Diff,
 		diffFilter:            options.DiffFilter,
+		manageIndex:           options.UsesIndex(),
 		logger:                slog.Default(), // TODO
 	}
 
@@ -139,7 +140,8 @@ func runAll(options *Options) (*State, error) {
 			Run: func(callback tl.TaskCallback) error {
 				return gw.prepare(ctx)
 			},
-			PostRun: handleInternalError,
+			PostRun:   handleInternalError,
+			BreakFlow: gw.prepareOK,
 		},
 		{
 			Title: "Hiding unstaged changes to partially staged files...",
@@ -154,7 +156,7 @@ func runAll(options *Options) (*State, error) {
 			}),
 		},
 		{
-			Title: "Running tasks for staged files...",
+			Title: "Running tasks for selected files...",
 			Run: func(callback tl.TaskCallback) error {
 				if ctx.internalError {
 					callback.Skip("internal error")

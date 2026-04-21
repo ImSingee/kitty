@@ -20,6 +20,8 @@ type gitWorkflow struct {
 	allowEmpty            bool
 	diff                  string
 	diffFilter            string
+	manageIndex           bool
+	breakReason           string
 	logger                *slog.Logger
 
 	partiallyStagedFiles []string
@@ -59,10 +61,18 @@ var gitDiffArgs = []string{
 }
 var gitApplyArgs = []string{"-v", "--whitespace=nowarn", "--recount", "--unidiff-zero"}
 
+func (g *gitWorkflow) prepareOK() (bool, string) {
+	return g.breakReason != "", g.breakReason
+}
+
 // Create a diff of partially staged files and backup stash if enabled.
 //
 // will set state.hasPartiallyStagedFiles
 func (g *gitWorkflow) prepare(state *State) (err error) {
+	if !g.manageIndex {
+		return nil
+	}
+
 	g.logger.Debug("Backing up original state...")
 
 	g.partiallyStagedFiles, err = g.getPartiallyStagedFiles()
@@ -109,6 +119,12 @@ func (g *gitWorkflow) prepare(state *State) (err error) {
 		if err != nil {
 			return ee.Wrap(err, "cannot create stash")
 		}
+
+		if hash == "" {
+			g.breakReason = "workspace is clean"
+			return nil
+		}
+
 		_, err = g.execGit("stash", "store", "--quiet", "--message", stashMessage, hash)
 		if err != nil {
 			return ee.Wrap(err, "cannot save stash")
@@ -328,9 +344,13 @@ func (g *gitWorkflow) getBackupStashIndex() (string, error) {
 //
 // may add ErrApplyEmptyCommit to state.errors
 func (g *gitWorkflow) applyModifications(state *State) error {
+	if !g.manageIndex {
+		return nil
+	}
+
 	g.logger.Debug("Adding task modifications to index...")
 
-	// `matchedFileChunks` includes staged files that lint-staged originally detected and matched against a task.
+	// `matchedFileChunks` includes files that lint-staged originally detected and matched against a task.
 	// Add only these files so any 3rd-party edits to other files won't be included in the commit.
 	// These additions per chunk are run "serially" to prevent race conditions.
 	// Git add creates a lockfile in the repo causing concurrent operations to fail.

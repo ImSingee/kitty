@@ -56,7 +56,7 @@ In most cases, the configuration file should be placed inside the root directory
 
 ## Extension: lint-staged
 
-kitty ships extension `lint-staged` to allow you to run commands on staged files.
+kitty ships extension `lint-staged` to allow you to run commands on git-selected files. By default it operates on staged files.
 
 In most cases, you can use `lint-staged` in the hook `pre-commit`:
 
@@ -69,6 +69,14 @@ Or you can manually run
 
 ```shell
 kitty lint-staged
+```
+
+You can also target other file states:
+
+```shell
+kitty @lint-staged --status unstaged
+kitty @lint-staged --status tracked
+kitty @lint-staged --status all
 ```
 
 ### Configuration
@@ -122,13 +130,15 @@ Inside the `files` object in format 1 or for whole object of format 2, each valu
 }
 ```
 
-This config will execute `your-cmd` with the list of currently staged files passed as arguments.
+This config will execute `your-cmd` with the list of currently selected files passed as arguments.
 
 So, considering you did `git add file1.ext file2.ext`, `lint-staged` will run the following command:
 
 ```shell
 your-cmd file1.ext file2.ext
 ```
+
+When using the default staged mode, `lint-staged` will manage the git index for you. When using `--status` (other than `staged`) or `--diff`, `lint-staged` runs on working tree files only: it does not create a backup stash, hide partially staged changes, or update the git index automatically.
 
 > **Note**
 > Apart from node.js `lint-staged`, we do not pass absolute paths to the commands. Instead, we pass the relative path to the working directory (where lint-staged config is placed) to the command.

@@ -8,7 +8,7 @@ var (
 	ErrConfigFormat           = fmt.Errorf("configuration should be an object or a function") // TODO
 	ErrConfigEmpty            = fmt.Errorf("configuration should not be empty")
 	ErrGetBackupStash         = fmt.Errorf("get backup stash error")
-	ErrGetStagedFiles         = fmt.Errorf("get staged files error")
+	ErrGetSelectedFiles       = fmt.Errorf("get selected files error")
 	ErrGitRepo                = fmt.Errorf("git repo error")
 	ErrIgnore                 = fmt.Errorf("load ignore rules error")
 	ErrHideUnstagedChanges    = fmt.Errorf("hide unstaged changes error")

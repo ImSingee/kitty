@@ -98,15 +98,20 @@ func (tl *TaskList) start(p *tea.Program) (result *Result) {
 	}
 
 	preventContinue := false
+	shouldBreak := false
 
 	for i, task := range tl.tasks {
-		if preventContinue {
+		if preventContinue || shouldBreak {
 			task.skip(p)
 			continue
 		}
 
 		taskResult := task.start(p)
 		result.SubResults[i] = taskResult
+
+		if task.BreakFlow != nil {
+			shouldBreak, _ = task.BreakFlow()
+		}
 
 		if taskResult.Error {
 			result.Error = true
