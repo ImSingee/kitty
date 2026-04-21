@@ -9,7 +9,7 @@ Kitty improves your commits!
 If you have installed [Homebrew](https://brew.sh/), run:
 
 ```shell
-brew tag ImSingee/kitty
+brew tap ImSingee/kitty
 brew install kitty
 ```
 
