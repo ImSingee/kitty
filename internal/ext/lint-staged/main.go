@@ -18,7 +18,7 @@ func Commands() []*cobra.Command {
 		Aliases: []string{"@lintstaged"},
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if o.Diff != "" {
+			if o.Diff != "" || o.SelectionMode() != SelectionModeStaged {
 				o.Stash = false
 			}
 
@@ -32,6 +32,7 @@ func Commands() []*cobra.Command {
 	flags.StringVarP(&o.ConfigPath, "config", "c", "", "path to configuration file")
 	flags.StringVar(&o.Diff, "diff", "", `override the default "--staged" flag of "git diff" to get list of files. Implies "--stash=false"`)
 	flags.StringVar(&o.DiffFilter, "diff-filter", "", `override the default "--diff-filter=ACMR" flag of "git diff" to get list of files`)
+	flags.StringVar(&o.Status, "status", string(SelectionModeStaged), "select files by git status: staged, unstaged, untracked, tracked, or all")
 	flags.BoolVar(&o.Stash, "stash", true, "enable the backup stash, and revert in case of errors")
 	flags.StringVarP(&o.Shell, "shell", "x", "", "use a custom shell to execute tasks with; defaults to the shell specified in the environment variable $SHELL, or /bin/sh if not set")
 	flags.BoolVarP(&o.Verbose, "verbose", "v", false, "show task output even when tasks succeed; by default only failed output is shown")
@@ -46,6 +47,7 @@ type Options struct {
 	ConfigPath string
 	Diff       string
 	DiffFilter string
+	Status     string
 	Stash      bool
 	Shell      string
 	Verbose    bool
@@ -69,6 +71,10 @@ func Run(options *Options) error {
 }
 
 func validateOptions(options *Options) error {
+	if err := options.ValidateSelectionMode(); err != nil {
+		return err
+	}
+
 	if options.Shell == "" {
 		options.Shell = os.Getenv("SHELL")
 		if options.Shell == "" {

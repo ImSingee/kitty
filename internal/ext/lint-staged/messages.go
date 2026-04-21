@@ -15,11 +15,11 @@ const (
 	arrowRight = "→"
 )
 
-func skippingBackup(hasInitialCommit bool, diff string) string {
+func skippingBackup(hasInitialCommit bool, options *Options) string {
 	var reason string
 	switch {
-	case diff != "":
-		reason = "`--diff` was used"
+	case options.SelectionReason() != "":
+		reason = options.SelectionReason()
 	case hasInitialCommit:
 		reason = "`--stash=false` was used"
 	default:

@@ -1,6 +1,7 @@
 package lintstaged
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -80,28 +81,79 @@ func resolveGitRepo(cwd string) (gitDir, gitConfigDir string, err error) {
 }
 
 func getDiffCommand(diff, diffFilter string) []string {
-	if diffFilter == "" {
-		// Docs for --diff-filter option:
-		// https://git-scm.com/docs/git-diff#Documentation/git-diff.txt---diff-filterACDMRTUXB82308203
-		diffFilter = "ACMR"
-	}
+	diffFilter = normalizeDiffFilter(diffFilter)
 
-	// Use `--diff branch1...branch2` or `--diff="branch1 branch2", or fall back to default staged files
-	var diffArgs []string
-	if diff == "" {
-		diffArgs = []string{"--staged"}
-	} else {
-		diffArgs = strings.Split(strings.TrimSpace(diff), " ")
-	}
+	// Use `--diff branch1...branch2` or `--diff="branch1 branch2"`.
+	diffArgs := strings.Fields(strings.TrimSpace(diff))
 
 	// Docs for -z option:
 	// https://git-scm.com/docs/git-diff#Documentation/git-diff.txt--z
 	return append([]string{"diff", "--name-only", "-z", "--diff-filter=" + diffFilter}, diffArgs...)
 }
 
+func normalizeDiffFilter(diffFilter string) string {
+	if diffFilter == "" {
+		// Docs for --diff-filter option:
+		// https://git-scm.com/docs/git-diff#Documentation/git-diff.txt---diff-filterACDMRTUXB82308203
+		diffFilter = "ACMR"
+	}
+
+	return diffFilter
+}
+
+func getStatusDiffCommand(diffFilter string, staged bool) []string {
+	args := []string{"diff", "--name-only", "-z", "--diff-filter=" + normalizeDiffFilter(diffFilter)}
+	if staged {
+		args = append(args, "--staged")
+	}
+
+	// Docs for -z option:
+	// https://git-scm.com/docs/git-diff#Documentation/git-diff.txt--z
+	return args
+}
+
+func getSelectedFiles(options *Options, gitDir string) ([]string, error) {
+	if options.Diff != "" {
+		return execGitZ(getDiffCommand(options.Diff, options.DiffFilter), gitDir)
+	}
+
+	switch options.SelectionMode() {
+	case SelectionModeStaged:
+		return getStagedFiles(options.DiffFilter, gitDir)
+	case SelectionModeUnstaged:
+		return getUnstagedFiles(options.DiffFilter, gitDir)
+	case SelectionModeUntracked:
+		return getUntrackedFiles(gitDir)
+	case SelectionModeTracked:
+		return getTrackedFiles(options.DiffFilter, gitDir)
+	case SelectionModeAll:
+		tracked, err := getTrackedFiles(options.DiffFilter, gitDir)
+		if err != nil {
+			return nil, err
+		}
+		untracked, err := getUntrackedFiles(gitDir)
+		if err != nil {
+			return nil, err
+		}
+
+		return uniqueStrings(append(tracked, untracked...)), nil
+	default:
+		return nil, fmt.Errorf("unsupported selection mode %q", options.SelectionMode())
+	}
+}
+
 // getStagedFiles returns a list of staged files in relative path to git root
-func getStagedFiles(options *Options, gitDir string) ([]string, error) {
-	lines, err := execGitZ(getDiffCommand(options.Diff, options.DiffFilter), gitDir)
+func getStagedFiles(diffFilter string, gitDir string) ([]string, error) {
+	lines, err := execGitZ(getStatusDiffCommand(diffFilter, true), gitDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return lines, nil
+}
+
+func getUnstagedFiles(diffFilter string, gitDir string) ([]string, error) {
+	lines, err := execGitZ(getStatusDiffCommand(diffFilter, false), gitDir)
 	if err != nil {
 		return nil, err
 	}
@@ -130,6 +182,41 @@ func getCachedFiles(gitDir string) ([]string, error) {
 	return execGitZ([]string{"ls-files", "-z", "--full-name"}, gitDir)
 }
 
-func getUncommittedFiles(gitDir string) ([]string, error) {
+func getTrackedFiles(diffFilter string, gitDir string) ([]string, error) {
+	staged, err := getStagedFiles(diffFilter, gitDir)
+	if err != nil {
+		return nil, err
+	}
+
+	unstaged, err := getUnstagedFiles(diffFilter, gitDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return uniqueStrings(append(staged, unstaged...)), nil
+}
+
+func getUntrackedFiles(gitDir string) ([]string, error) {
 	return execGitZ([]string{"ls-files", "-z", "--full-name", "--others", "--exclude-standard"}, gitDir)
+}
+
+func uniqueStrings(in []string) []string {
+	if len(in) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, item := range in {
+		if item == "" {
+			continue
+		}
+		if _, ok := seen[item]; ok {
+			continue
+		}
+		seen[item] = struct{}{}
+		out = append(out, item)
+	}
+
+	return out
 }
