@@ -83,8 +83,11 @@ func resolveGitRepo(cwd string) (gitDir, gitConfigDir string, err error) {
 func getDiffCommand(diff, diffFilter string) []string {
 	diffFilter = normalizeDiffFilter(diffFilter)
 
-	// Use `--diff branch1...branch2` or `--diff="branch1 branch2"`.
 	diffArgs := strings.Fields(strings.TrimSpace(diff))
+	if len(diffArgs) == 0 {
+		// Fall back to staged files when no explicit diff range is provided.
+		diffArgs = []string{"--staged"}
+	}
 
 	// Docs for -z option:
 	// https://git-scm.com/docs/git-diff#Documentation/git-diff.txt--z
@@ -126,8 +129,10 @@ func getSelectedFiles(options *Options, gitDir string) ([]string, error) {
 		return getUntrackedFiles(gitDir)
 	case SelectionModeTracked:
 		return getTrackedFiles(options.DiffFilter, gitDir)
+	case SelectionModeChanged:
+		return getChangedFiles(options.DiffFilter, gitDir)
 	case SelectionModeAll:
-		tracked, err := getTrackedFiles(options.DiffFilter, gitDir)
+		tracked, err := getCachedFiles(gitDir)
 		if err != nil {
 			return nil, err
 		}
@@ -194,6 +199,19 @@ func getTrackedFiles(diffFilter string, gitDir string) ([]string, error) {
 	}
 
 	return uniqueStrings(append(staged, unstaged...)), nil
+}
+
+func getChangedFiles(diffFilter string, gitDir string) ([]string, error) {
+	tracked, err := getTrackedFiles(diffFilter, gitDir)
+	if err != nil {
+		return nil, err
+	}
+	untracked, err := getUntrackedFiles(gitDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return uniqueStrings(append(tracked, untracked...)), nil
 }
 
 func getUntrackedFiles(gitDir string) ([]string, error) {

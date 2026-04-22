@@ -32,7 +32,7 @@ func Commands() []*cobra.Command {
 	flags.StringVarP(&o.ConfigPath, "config", "c", "", "path to configuration file")
 	flags.StringVar(&o.Diff, "diff", "", `override the default "--staged" flag of "git diff" to get list of files. Implies "--stash=false"`)
 	flags.StringVar(&o.DiffFilter, "diff-filter", "", `override the default "--diff-filter=ACMR" flag of "git diff" to get list of files`)
-	flags.StringVar(&o.Status, "status", string(SelectionModeStaged), "select files by git status: staged, unstaged, untracked, tracked, or all")
+	flags.StringVar(&o.Status, "status", string(SelectionModeStaged), "select files by git status: staged, unstaged, untracked, tracked, changed, or all")
 	flags.BoolVar(&o.Stash, "stash", true, "enable the backup stash, and revert in case of errors")
 	flags.StringVarP(&o.Shell, "shell", "x", "", "use a custom shell to execute tasks with; defaults to the shell specified in the environment variable $SHELL, or /bin/sh if not set")
 	flags.BoolVarP(&o.Verbose, "verbose", "v", false, "show task output even when tasks succeed; by default only failed output is shown")

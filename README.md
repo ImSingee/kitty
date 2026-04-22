@@ -76,6 +76,7 @@ You can also target other file states:
 ```shell
 kitty @lint-staged --status unstaged
 kitty @lint-staged --status tracked
+kitty @lint-staged --status changed
 kitty @lint-staged --status all
 ```
 

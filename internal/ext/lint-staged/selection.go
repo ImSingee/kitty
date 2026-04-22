@@ -9,6 +9,7 @@ const (
 	SelectionModeUnstaged  SelectionMode = "unstaged"
 	SelectionModeUntracked SelectionMode = "untracked"
 	SelectionModeTracked   SelectionMode = "tracked"
+	SelectionModeChanged   SelectionMode = "changed"
 	SelectionModeAll       SelectionMode = "all"
 )
 
@@ -26,10 +27,10 @@ func (o *Options) UsesIndex() bool {
 
 func (o *Options) ValidateSelectionMode() error {
 	switch o.SelectionMode() {
-	case SelectionModeStaged, SelectionModeUnstaged, SelectionModeUntracked, SelectionModeTracked, SelectionModeAll:
+	case SelectionModeStaged, SelectionModeUnstaged, SelectionModeUntracked, SelectionModeTracked, SelectionModeChanged, SelectionModeAll:
 		// ok
 	default:
-		return fmt.Errorf("invalid --status %q (must be one of: staged, unstaged, untracked, tracked, all)", o.Status)
+		return fmt.Errorf("invalid --status %q (must be one of: staged, unstaged, untracked, tracked, changed, all)", o.Status)
 	}
 
 	if o.Diff != "" && o.SelectionMode() != SelectionModeStaged {
@@ -62,8 +63,10 @@ func (o *Options) SelectedFilesLabel() string {
 		return "untracked files"
 	case SelectionModeTracked:
 		return "tracked changed files"
-	case SelectionModeAll:
+	case SelectionModeChanged:
 		return "changed files"
+	case SelectionModeAll:
+		return "all files"
 	default:
 		return "staged files"
 	}

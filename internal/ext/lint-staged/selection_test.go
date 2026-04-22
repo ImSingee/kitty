@@ -27,6 +27,26 @@ func TestOptionsSelectionMode(t *testing.T) {
 		assert.Equal(t, "tracked changed files", options.SelectedFilesLabel())
 	})
 
+	t.Run("changed status describes diff set", func(t *testing.T) {
+		options := &Options{Status: string(SelectionModeChanged)}
+
+		require.NoError(t, options.ValidateSelectionMode())
+		assert.Equal(t, SelectionModeChanged, options.SelectionMode())
+		assert.False(t, options.UsesIndex())
+		assert.Equal(t, "`--status=changed` was used", options.SelectionReason())
+		assert.Equal(t, "changed files", options.SelectedFilesLabel())
+	})
+
+	t.Run("all status describes full repo set", func(t *testing.T) {
+		options := &Options{Status: string(SelectionModeAll)}
+
+		require.NoError(t, options.ValidateSelectionMode())
+		assert.Equal(t, SelectionModeAll, options.SelectionMode())
+		assert.False(t, options.UsesIndex())
+		assert.Equal(t, "`--status=all` was used", options.SelectionReason())
+		assert.Equal(t, "all files", options.SelectedFilesLabel())
+	})
+
 	t.Run("diff uses working tree only", func(t *testing.T) {
 		options := &Options{Diff: "HEAD"}
 
@@ -45,7 +65,7 @@ func TestOptionsSelectionMode(t *testing.T) {
 	t.Run("diff cannot combine with non default status", func(t *testing.T) {
 		options := &Options{
 			Diff:   "HEAD",
-			Status: string(SelectionModeAll),
+			Status: string(SelectionModeChanged),
 		}
 
 		require.Error(t, options.ValidateSelectionMode())
