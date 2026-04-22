@@ -1,6 +1,7 @@
 package format
 
 import (
+	"bytes"
 	"encoding/json"
 
 	"github.com/ImSingee/go-ex/ee"
@@ -17,7 +18,17 @@ func (f *JsonFormatter) Format(filename string, content []byte) ([]byte, error) 
 		return nil, ee.New("invalid json")
 	}
 
-	return json.MarshalIndent(v, "", f.Indent)
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", f.Indent)
+
+	err = encoder.Encode(v)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
 }
 
 func (o *options) jsonFormatter() *JsonFormatter {
