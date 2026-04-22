@@ -9,7 +9,7 @@ import (
 
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/pp"
-	"github.com/ImSingee/semver"
+	semver "github.com/Masterminds/semver/v3"
 
 	"github.com/ImSingee/kitty/internal/extension-registry/installer"
 	eroptions "github.com/ImSingee/kitty/internal/extension-registry/options"

@@ -3,7 +3,7 @@ package version
 import (
 	"fmt"
 
-	"github.com/ImSingee/semver"
+	semver "github.com/Masterminds/semver/v3"
 )
 
 var (
@@ -29,7 +29,7 @@ func Semver() *semver.Version {
 	if err == nil {
 		return v
 	} else {
-		return semver.NewVersionByParts(0, 0, 0)
+		return semver.MustParse("0.0.0")
 	}
 }
 

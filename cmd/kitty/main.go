@@ -10,11 +10,10 @@ import (
 
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/pp"
-	"github.com/ImSingee/semver"
 	"github.com/spf13/cobra"
-	"github.com/ysmood/gson"
 
 	"github.com/ImSingee/kitty/internal/config"
+	"github.com/ImSingee/kitty/internal/config/kittyversion"
 	"github.com/ImSingee/kitty/internal/ext/format"
 	lintstaged "github.com/ImSingee/kitty/internal/ext/lint-staged"
 	"github.com/ImSingee/kitty/internal/hooks"
@@ -148,61 +147,22 @@ func mayUseAnotherKitty() error {
 		}
 	}
 
-	requiredVersion := parseRequiredKittyVersion(c)
+	requiredVersion := kittyversion.ParseRequired(c)
 	if requiredVersion == "" {
 		return nil // no required version
 	}
 
-	// TODO auto download new kitty version
-	if requiredVersion[0] == '=' {
-		sv, err := semver.NewVersion(requiredVersion[1:])
-		if err != nil {
-			return ee.Wrapf(err, "invalid kitty required version %s", requiredVersion)
-		}
-
-		if !sv.Equal(version.Semver()) {
-			pp.Println("Please use kitty ", requiredVersion[1:], "to run this command")
-			pp.Println("Visit https://github.com/ImSingee/kitty/releases/tag/v" + requiredVersion[1:] + " to download")
-			return ee.Phantom
-		}
-	} else {
-		sv, err := semver.NewVersion(strings.TrimPrefix(requiredVersion, ">"))
-		if err != nil {
-			return ee.Wrapf(err, "invalid kitty required version %s", requiredVersion)
-		}
-
-		if version.LessThan(sv) {
-			pp.Println("Please use kitty ", requiredVersion, "or later to run this command")
-			pp.Println("Visit https://github.com/ImSingee/kitty/releases to download")
-			return ee.Phantom
-		}
+	ok, err := kittyversion.CurrentSatisfies(requiredVersion)
+	if err != nil {
+		return ee.Wrapf(err, "invalid kitty required version %s", requiredVersion)
+	}
+	if !ok {
+		pp.Println("Please use kitty version matching constraint", requiredVersion, "to run this command")
+		pp.Println("Visit https://github.com/ImSingee/kitty/releases to download")
+		return ee.Phantom
 	}
 
 	return nil
-}
-
-func parseRequiredKittyVersion(c map[string]gson.JSON) string {
-	if c == nil {
-		return ""
-	}
-
-	kitty, kittyExists := c["kitty"]
-	if !kittyExists {
-		return ""
-	}
-
-	switch kittyVal := kitty.Val().(type) {
-	case string:
-		return kittyVal
-	case map[string]any:
-		if v, ok := kittyVal["version"].(string); ok {
-			return v
-		}
-
-		return ""
-	default:
-		return "" // unknown kitty config type
-	}
 }
 
 func runExtension(name string, args []string) error {

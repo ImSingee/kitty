@@ -6,7 +6,7 @@ import (
 	"text/template"
 
 	"github.com/ImSingee/go-ex/ee"
-	"github.com/ImSingee/semver"
+	semver "github.com/Masterminds/semver/v3"
 
 	"github.com/ImSingee/kitty/internal/extension-registry/installer"
 )

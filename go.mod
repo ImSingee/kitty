@@ -1,11 +1,11 @@
 module github.com/ImSingee/kitty
 
-go 1.20
+go 1.21
 
 require (
 	github.com/ImSingee/go-ex v0.4.43
-	github.com/ImSingee/semver v0.1.0
 	github.com/ImSingee/tt v1.0.4
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/alessio/shellescape v1.4.2
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/go-git/go-git/v5 v5.9.0
