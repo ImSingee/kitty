@@ -1,10 +1,11 @@
 package format
 
 import (
-	"bytes"
 	"encoding/json"
 
 	"github.com/ImSingee/go-ex/ee"
+
+	"github.com/ImSingee/kitty/internal/lib/jsonfmt"
 )
 
 type JsonFormatter struct {
@@ -18,17 +19,7 @@ func (f *JsonFormatter) Format(filename string, content []byte) ([]byte, error) 
 		return nil, ee.New("invalid json")
 	}
 
-	var buf bytes.Buffer
-	encoder := json.NewEncoder(&buf)
-	encoder.SetEscapeHTML(false)
-	encoder.SetIndent("", f.Indent)
-
-	err = encoder.Encode(v)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
+	return jsonfmt.Marshal(v, f.Indent)
 }
 
 func (o *options) jsonFormatter() *JsonFormatter {

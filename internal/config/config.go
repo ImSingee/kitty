@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +8,8 @@ import (
 	"github.com/ImSingee/go-ex/ee"
 	"github.com/ImSingee/go-ex/exjson"
 	"github.com/ysmood/gson"
+
+	"github.com/ImSingee/kitty/internal/lib/jsonfmt"
 )
 
 var ConfigFileNames = []string{
@@ -100,7 +101,12 @@ func PatchKittyConfig(dir string, patch func(map[string]gson.JSON) (save bool, e
 }
 
 func saveKittyConfig(filename string, c map[string]gson.JSON) error {
-	data, err := json.MarshalIndent(c, "", "  ")
+	raw := make(map[string]any, len(c))
+	for key, value := range c {
+		raw[key] = value.Val()
+	}
+
+	data, err := jsonfmt.Marshal(raw, "  ")
 	if err != nil {
 		return ee.Wrap(err, "cannot json encode config")
 	}
