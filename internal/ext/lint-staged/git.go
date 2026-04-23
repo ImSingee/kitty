@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ImSingee/go-ex/mr"
+
 	"github.com/ImSingee/kitty/internal/lib/git"
 )
 
@@ -116,35 +118,50 @@ func getStatusDiffCommand(diffFilter string, staged bool) []string {
 }
 
 func getSelectedFiles(options *Options, gitDir string) ([]string, error) {
+	var files []string
+	var err error
+
 	if options.Diff != "" {
-		return execGitZ(getDiffCommand(options.Diff, options.DiffFilter), gitDir)
+		files, err = execGitZ(getDiffCommand(options.Diff, options.DiffFilter), gitDir)
+	} else {
+		switch options.SelectionMode() {
+		case SelectionModeStaged:
+			files, err = getStagedFiles(options.DiffFilter, gitDir)
+		case SelectionModeUnstaged:
+			files, err = getUnstagedFiles(options.DiffFilter, gitDir)
+		case SelectionModeUntracked:
+			files, err = getUntrackedFiles(gitDir)
+		case SelectionModeTracked:
+			files, err = getTrackedFiles(options.DiffFilter, gitDir)
+		case SelectionModeChanged:
+			files, err = getChangedFiles(options.DiffFilter, gitDir)
+		case SelectionModeAll:
+			tracked, err := getCachedFiles(gitDir)
+			if err != nil {
+				return nil, err
+			}
+			untracked, err := getUntrackedFiles(gitDir)
+			if err != nil {
+				return nil, err
+			}
+
+			files = uniqueStrings(append(tracked, untracked...))
+		default:
+			return nil, fmt.Errorf("unsupported selection mode %q", options.SelectionMode())
+		}
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	switch options.SelectionMode() {
-	case SelectionModeStaged:
-		return getStagedFiles(options.DiffFilter, gitDir)
-	case SelectionModeUnstaged:
-		return getUnstagedFiles(options.DiffFilter, gitDir)
-	case SelectionModeUntracked:
-		return getUntrackedFiles(gitDir)
-	case SelectionModeTracked:
-		return getTrackedFiles(options.DiffFilter, gitDir)
-	case SelectionModeChanged:
-		return getChangedFiles(options.DiffFilter, gitDir)
-	case SelectionModeAll:
-		tracked, err := getCachedFiles(gitDir)
-		if err != nil {
-			return nil, err
-		}
-		untracked, err := getUntrackedFiles(gitDir)
-		if err != nil {
-			return nil, err
-		}
+	return filterExistingFiles(files, gitDir), nil
+}
 
-		return uniqueStrings(append(tracked, untracked...)), nil
-	default:
-		return nil, fmt.Errorf("unsupported selection mode %q", options.SelectionMode())
-	}
+func filterExistingFiles(files []string, gitDir string) []string {
+	return mr.Filter(files, func(file string, _ int) bool {
+		_, err := os.Lstat(filepath.Join(gitDir, file))
+		return err == nil
+	})
 }
 
 // getStagedFiles returns a list of staged files in relative path to git root
