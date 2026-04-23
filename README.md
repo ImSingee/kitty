@@ -9,8 +9,7 @@ Kitty improves your commits!
 If you have installed [Homebrew](https://brew.sh/), run:
 
 ```shell
-brew tap ImSingee/kitty
-brew install kitty
+brew install ImSingee/kitty/kitty
 ```
 
 Or you can visit the [release](https://github.com/ImSingee/kitty/releases) page to download the latest version. The downloaded archive contains a single executable file, you can put it the system PATH.
