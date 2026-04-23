@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kitty"
+  short_description: "Use Kitty native Git hooks"
+  default_prompt: "Use $kitty to set up Git hooks and lint-staged workflows in this repository."
