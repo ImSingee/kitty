@@ -154,6 +154,14 @@ Only one lint-staged config file may exist in the same directory. Multiple confi
 
 `kitty install` runs `kitty tools install` unless `--no-tools` is provided. Use `.kitty/.bin` for hook-local tool binaries and prefer committing tool intent through Kitty-managed project files rather than relying on a developer's global `PATH`.
 
+Proxy behavior:
+
+- `go-install` tools inherit the process environment, so `GOPROXY`, `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` work according to the Go toolchain's normal behavior.
+- Kitty's own HTTP downloaders (`bin`, `dist-zip`, `dist-tar`) use Go's default HTTP proxy support: `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` are supported, including lowercase variants.
+- `ALL_PROXY` is not handled by Kitty's HTTP downloader.
+- Set `GHPROXY=https://ghfast.top` to rewrite supported GitHub URLs before Kitty downloads files or the default GitHub-hosted registry manifest. Supported hosts are `github.com`, `raw.githubusercontent.com`, `gist.github.com`, and `gist.githubusercontent.com`.
+- `GHPROXY` uses prefix form, for example `https://ghfast.top/https://github.com/owner/repo/releases/download/...`. When it is set, proxy failures are reported directly and Kitty does not retry without the proxy.
+
 If a hook cannot find a tool, check whether `.kitty/.bin` is on `PATH`. With direnv, `kitty install --direnv` creates an `.envrc` that exports:
 
 ```sh
