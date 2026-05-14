@@ -14,12 +14,6 @@ brew install ImSingee/kitty/kitty
 
 Or you can visit the [release](https://github.com/ImSingee/kitty/releases) page to download the latest version. The downloaded archive contains a single executable file, you can put it the system PATH.
 
-Or you can install it from source (this requires Go1.21+):
- 
-```shell
-go install github.com/ImSingee/kitty@latest
-``` 
-
 ## Usage
 
 After cloning a project:
@@ -174,4 +168,3 @@ If you really want to use kitty on Windows, PR is welcome.
 ## License
 
 MIT
-

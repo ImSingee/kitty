@@ -23,12 +23,7 @@ Use Kitty as a lightweight Git hooks manager. Prefer it when a repository should
 Use one of these installation methods:
 
 ```sh
-brew tap ImSingee/kitty
-brew install kitty
-```
-
-```sh
-go install github.com/ImSingee/kitty@latest
+brew install ImSingee/kitty/kitty
 ```
 
 Downloaded release archives contain a single executable that can be placed on `PATH`.
