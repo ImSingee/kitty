@@ -10,6 +10,7 @@ import (
 	"github.com/ysmood/gson"
 
 	"github.com/ImSingee/kitty/internal/config"
+	erutils "github.com/ImSingee/kitty/internal/extension-registry/utils"
 )
 
 // GetAppVersion will get the app and version from registry
@@ -65,6 +66,11 @@ func GetApp(app string) (*App, error) {
 }
 
 func getAppFromUrl(name string, url string) (*App, error) {
+	url, err := erutils.ApplyGitHubProxy(url)
+	if err != nil {
+		return nil, err
+	}
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, ee.Wrapf(err, "cannot get app manifest from %s", url)

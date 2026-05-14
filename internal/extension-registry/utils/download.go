@@ -11,6 +11,11 @@ import (
 )
 
 func downloadFileTo(url string, w io.Writer, showProgress bool) error {
+	url, err := ApplyGitHubProxy(url)
+	if err != nil {
+		return err
+	}
+
 	if showProgress { // TODO progress bar
 		pp.Println("Download", url, "...")
 	}
