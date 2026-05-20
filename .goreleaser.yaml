@@ -1,8 +1,10 @@
+version: 2
 before:
   hooks:
     - go mod tidy
 builds:
   - main: ./cmd/kitty
+    binary: kitty
     env:
       - CGO_ENABLED=0
     goos:
@@ -19,6 +21,16 @@ builds:
       - -X github.com/ImSingee/kitty/internal/version.version={{.Version}}
       - -X github.com/ImSingee/kitty/internal/version.commit={{.Commit}}
       - -X github.com/ImSingee/kitty/internal/version.buildAt={{.Date}}
+dockers_v2:
+  - images:
+      - singee/kitty
+    tags:
+      - "{{ .Version }}"
+      - "{{ .Major }}.{{ .Minor }}"
+      - latest
+    platforms:
+      - linux/amd64
+      - linux/arm64
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of uname.
