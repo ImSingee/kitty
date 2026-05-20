@@ -19,7 +19,65 @@ import (
 )
 
 type installOptions struct {
+	root      string
+	quiet     bool
 	toInstall []string
+}
+
+// EnsureInstalled installs or updates configured tools when their installed
+// symlink version does not match the repository configuration.
+func EnsureInstalled(root string, apps ...string) error {
+	return ensureInstalled(root, false, apps...)
+}
+
+// EnsureInstalledQuiet is like EnsureInstalled, but suppresses installer
+// progress output. This is useful when stdout has a protocol-level meaning.
+func EnsureInstalledQuiet(root string, apps ...string) error {
+	return ensureInstalled(root, true, apps...)
+}
+
+func ensureInstalled(root string, quiet bool, apps ...string) error {
+	o := &installOptions{root: root, quiet: quiet}
+
+	currentTools, err := (&listOptions{root: root}).getCurrentToolsMap()
+	if err != nil {
+		return ee.Wrap(err, "cannot load current tools")
+	}
+
+	requiredTools := currentTools
+	if len(apps) > 0 {
+		requiredTools = make(map[string]string, len(apps))
+		for _, app := range apps {
+			if version, ok := currentTools[app]; ok {
+				requiredTools[app] = version
+			}
+		}
+	}
+	if len(requiredTools) == 0 {
+		return nil
+	}
+
+	installedTools, err := (&listOptions{root: root}).getInstalledTools()
+	if err != nil {
+		return ee.Wrap(err, "cannot load installed tools")
+	}
+
+	toInstallOrUpdate := getToolsToInstallOrUpdate(requiredTools, installedTools)
+	if len(toInstallOrUpdate) == 0 {
+		return nil
+	}
+
+	results, err := o.installTools(currentTools, toInstallOrUpdate)
+	if err != nil {
+		return err
+	}
+
+	newToolsInfo := cloneToolsMap(currentTools)
+	for _, app := range toInstallOrUpdate {
+		newToolsInfo[app] = results[app].version
+	}
+
+	return o.writeToolsInfo(newToolsInfo)
 }
 
 func InstallCommand() *cobra.Command {
@@ -44,7 +102,7 @@ func InstallCommand() *cobra.Command {
 
 func (o *installOptions) install() error {
 	// load tools from config
-	currentTools, err := (&listOptions{}).getCurrentToolsMap()
+	currentTools, err := (&listOptions{root: o.root}).getCurrentToolsMap()
 	if err != nil {
 		return ee.Wrap(err, "cannot load current tools")
 	}
@@ -59,29 +117,13 @@ func (o *installOptions) install() error {
 	}
 
 	// load installed tools
-	installedTools, err := (&listOptions{}).getInstalledTools()
+	installedTools, err := (&listOptions{root: o.root}).getInstalledTools()
 	if err != nil {
 		return ee.Wrap(err, "cannot load installed tools")
 	}
 
 	// diff
-	var toInstall []string
-	var toUpdate []string
 	var toRemove []string
-
-	for app, version := range currentTools {
-		if version == "-" { // ignore
-			continue
-		}
-
-		if installedVersion, ok := installedTools[app]; ok {
-			if installedVersion != version {
-				toUpdate = append(toUpdate, app)
-			}
-		} else {
-			toInstall = append(toInstall, app)
-		}
-	}
 	for app := range installedTools {
 		if _, ok := currentTools[app]; !ok {
 			toRemove = append(toRemove, app)
@@ -89,24 +131,10 @@ func (o *installOptions) install() error {
 	}
 
 	// install needed (toInstall + toUpdate)
-	toInstallOrUpdate := mr.Flats(toInstall, toUpdate)
-	sort.Strings(toInstallOrUpdate)
-	var installFailedApps []string
-	results := make(map[string]*installResult, len(toInstallOrUpdate))
-	for _, app := range toInstallOrUpdate {
-		version := currentTools[app]
-
-		pp.BluePrintln(">>> Install", app)
-
-		o := &installOneOptions{app: app, version: version}
-
-		result, err := o.install()
-		if err != nil {
-			pp.RedPrintln("ERROR:", err.Error())
-			installFailedApps = append(installFailedApps, app)
-			continue
-		}
-		results[app] = result
+	toInstallOrUpdate := getToolsToInstallOrUpdate(currentTools, installedTools)
+	results, err := o.installTools(currentTools, toInstallOrUpdate)
+	if err != nil {
+		return err
 	}
 
 	// remove unneeded (toRemove)
@@ -114,12 +142,7 @@ func (o *installOptions) install() error {
 		pp.BluePrintln(">>> Remove", app)
 
 		// remove from .bin
-		_ = os.Remove(filepath.Join(".kitty", ".bin", app))
-	}
-
-	// report error
-	if len(installFailedApps) > 0 {
-		return ee.Errorf("failed to install %s", strings.Join(installFailedApps, ", "))
+		_ = os.Remove(filepath.Join(o.root, ".kitty", ".bin", app))
 	}
 
 	// generate new tools info
@@ -140,8 +163,61 @@ func (o *installOptions) install() error {
 	return nil
 }
 
+func getToolsToInstallOrUpdate(currentTools map[string]string, installedTools map[string]string) []string {
+	var toInstall []string
+	var toUpdate []string
+
+	for app, version := range currentTools {
+		if version == "-" { // ignore
+			continue
+		}
+
+		if installedVersion, ok := installedTools[app]; ok {
+			if installedVersion != version {
+				toUpdate = append(toUpdate, app)
+			}
+		} else {
+			toInstall = append(toInstall, app)
+		}
+	}
+
+	toInstallOrUpdate := mr.Flats(toInstall, toUpdate)
+	sort.Strings(toInstallOrUpdate)
+	return toInstallOrUpdate
+}
+
+func (o *installOptions) installTools(currentTools map[string]string, toInstallOrUpdate []string) (map[string]*installResult, error) {
+	var installFailedApps []string
+	results := make(map[string]*installResult, len(toInstallOrUpdate))
+	for _, app := range toInstallOrUpdate {
+		version := currentTools[app]
+
+		if !o.quiet {
+			pp.BluePrintln(">>> Install", app)
+		}
+
+		one := &installOneOptions{root: o.root, quiet: o.quiet, app: app, version: version}
+
+		result, err := one.install()
+		if err != nil {
+			if !o.quiet {
+				pp.RedPrintln("ERROR:", err.Error())
+			}
+			installFailedApps = append(installFailedApps, app)
+			continue
+		}
+		results[app] = result
+	}
+
+	if len(installFailedApps) > 0 {
+		return nil, ee.Errorf("failed to install %s", strings.Join(installFailedApps, ", "))
+	}
+
+	return results, nil
+}
+
 func (o *installOptions) writeToolsInfo(tools map[string]string) error {
-	return config.PatchKittyConfig("", func(c map[string]gson.JSON) (save bool, err error) {
+	return config.PatchKittyConfig(o.root, func(c map[string]gson.JSON) (save bool, err error) {
 		// if c["tools"] not exist and tools is empty, do nothing
 		if _, toolsKeyExist := c["tools"]; !toolsKeyExist && len(tools) == 0 {
 			return false, nil
@@ -153,6 +229,8 @@ func (o *installOptions) writeToolsInfo(tools map[string]string) error {
 }
 
 type installOneOptions struct {
+	root    string
+	quiet   bool
 	app     string
 	version string
 }
@@ -168,6 +246,18 @@ func (o *installOneOptions) install() (*installResult, error) {
 	if o.version == "" {
 		o.version = "latest"
 	}
+	if o.root != "" {
+		previousWd, err := os.Getwd()
+		if err != nil {
+			return nil, ee.Wrap(err, "cannot get working directory")
+		}
+		if err := os.Chdir(o.root); err != nil {
+			return nil, ee.Wrapf(err, "cannot change working directory to %s", o.root)
+		}
+		defer func() {
+			_ = os.Chdir(previousWd)
+		}()
+	}
 
 	app, version, err := extregistry.GetAppVersion(o.app, o.version)
 	if err != nil {
@@ -180,23 +270,23 @@ func (o *installOneOptions) install() (*installResult, error) {
 
 	// download to .bin/[system-key]/[name]@[version]
 	rel := filepath.Join("."+string(osKey), app.Name+"@"+version.Version)
-	dst := filepath.Join(".kitty", ".bin", rel)
+	dst := filepath.Join(o.root, ".kitty", ".bin", rel)
 
 	// TODO 安装到中央工具仓库（而不是 .bin 下）
 	if version.InstallOptions != nil { // download for version
-		err = version.InstallTo(dst)
+		err = version.InstallToWithProgress(dst, !o.quiet)
 		if err != nil {
 			return nil, ee.Wrapf(err, "cannot download %s@%s", app.Name, version.Version)
 		}
 	} else { // download for unknown version
-		err := version.InstallUnknownVersionTo(dst)
+		err := version.InstallUnknownVersionToWithProgress(dst, !o.quiet)
 		if err != nil {
 			return nil, ee.Wrapf(err, "cannot download %s@%s", app.Name, o.version)
 		}
 	}
 
 	// Create soft link .bin/[name] -> .bin/[system-key]/[name]@[version]
-	err = symlink(rel, filepath.Join(".kitty", ".bin", app.Name))
+	err = symlink(rel, filepath.Join(o.root, ".kitty", ".bin", app.Name))
 	if err != nil {
 		return nil, err
 	}

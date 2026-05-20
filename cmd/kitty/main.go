@@ -173,8 +173,10 @@ func runExtension(name string, args []string) error {
 		return ee.Wrap(err, "cannot get git root")
 	}
 
-	// TODO verify tools (check exist, check version)
-	// TODO call tools.GetTool (like below, refactor later)
+	if err := tools.EnsureInstalled(root, name); err != nil {
+		return ee.Wrapf(err, "cannot install extension `%s`", name)
+	}
+
 	// run apps
 	if appBin, err := exec.LookPath(filepath.Join(root, ".kitty", ".bin", name)); err == nil {
 		// bin extension

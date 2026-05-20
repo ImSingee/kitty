@@ -16,11 +16,15 @@ import (
 )
 
 func (a *App) installUnknownVersionTo(version string, dst string) error {
+	return a.installUnknownVersionToWithProgress(version, dst, true)
+}
+
+func (a *App) installUnknownVersionToWithProgress(version string, dst string, showProgress bool) error {
 	slog.Debug("app installUnknownVersionTo", "version", version, "dst", dst)
 	o := &installer.InstallOptions{
 		Version:      version,
 		To:           dst,
-		ShowProgress: true,
+		ShowProgress: showProgress,
 	}
 
 	err := tryInstall(a.InstallOptions, o)
@@ -36,16 +40,24 @@ func (a *App) installUnknownVersionTo(version string, dst string) error {
 }
 
 func (v *Version) InstallUnknownVersionTo(dst string) error {
+	return v.InstallUnknownVersionToWithProgress(dst, true)
+}
+
+func (v *Version) InstallUnknownVersionToWithProgress(dst string, showProgress bool) error {
 	slog.Debug("version installUnknownVersionTo", "dst", dst)
-	return v.App.installUnknownVersionTo(v.Version, dst)
+	return v.App.installUnknownVersionToWithProgress(v.Version, dst, showProgress)
 }
 
 func (v *Version) InstallTo(dst string) error {
+	return v.InstallToWithProgress(dst, true)
+}
+
+func (v *Version) InstallToWithProgress(dst string, showProgress bool) error {
 	slog.Debug("version InstallTo", "version", v, "dst", dst)
 	o := &installer.InstallOptions{
 		Version:      v.Version,
 		To:           dst,
-		ShowProgress: true,
+		ShowProgress: showProgress,
 	}
 
 	err := tryInstall(v.InstallOptions, o)

@@ -11,7 +11,9 @@ import (
 	"github.com/ImSingee/kitty/internal/config"
 )
 
-type listOptions struct{}
+type listOptions struct {
+	root string
+}
 
 type tool struct {
 	name    string
@@ -22,7 +24,7 @@ type tool struct {
 // but version can be any string in fact
 // and version can be a '-' to indicate it's an external tool
 func (o *listOptions) getCurrentToolsMap() (map[string]string, error) {
-	c, err := config.GetKittyConfig("")
+	c, err := config.GetKittyConfig(o.root)
 	if err != nil {
 		if ee.Is(err, os.ErrNotExist) {
 			return map[string]string{}, nil
@@ -56,9 +58,13 @@ func (o *listOptions) getCurrentToolsMap() (map[string]string, error) {
 // returned map is [name: version] in normal case
 // but version can be '?' if it's not a symlink or isn't a valid kitty symlink
 func (o *listOptions) getInstalledTools() (map[string]string, error) {
-	w, err := os.Getwd()
-	if err != nil {
-		return nil, ee.Wrap(err, "cannot get working directory")
+	w := o.root
+	if w == "" {
+		var err error
+		w, err = os.Getwd()
+		if err != nil {
+			return nil, ee.Wrap(err, "cannot get working directory")
+		}
 	}
 
 	files, err := os.ReadDir(filepath.Join(w, ".kitty", ".bin"))
