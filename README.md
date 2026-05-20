@@ -47,6 +47,18 @@ The configuration file will be read from the following locations:
 
 In most cases, the configuration file should be placed inside the root directory of your project. But in some cases, you can place the config file inside the subdirectory of the project to override some configs.
 
+## Extension: version
+
+`kitty @version` prints build metadata for the current Git worktree as a shell-compatible env file. It reads Git data with go-git, so it does not require the `git` CLI to exist in the runtime image.
+
+```shell
+kitty @version
+kitty -R /worktree @version -o /out/buildinfo.env
+docker run --rm -v "$PWD:/worktree:ro" singee/kitty:latest @version > buildinfo.env
+```
+
+The output includes `VERSION`, `GITCOMMIT`, `GITCOMMIT_SHORT`, `GITTAG`, `GITDESCRIBE`, `GITDIRTY`, `BUILDTIME`, `BUILDID`, and the `KITTY_*` fields for the kitty binary that generated the file.
+
 ## Extension: lint-staged
 
 kitty ships extension `lint-staged` to allow you to run commands on git-selected files. By default it operates on staged files.

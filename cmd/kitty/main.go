@@ -16,6 +16,7 @@ import (
 	"github.com/ImSingee/kitty/internal/config/kittyversion"
 	"github.com/ImSingee/kitty/internal/ext/format"
 	lintstaged "github.com/ImSingee/kitty/internal/ext/lint-staged"
+	versionext "github.com/ImSingee/kitty/internal/ext/version"
 	"github.com/ImSingee/kitty/internal/hooks"
 	"github.com/ImSingee/kitty/internal/lib/git"
 	"github.com/ImSingee/kitty/internal/lib/xlog"
@@ -58,6 +59,7 @@ func main() {
 	// load internal extensions
 	app.AddCommand(lintstaged.Commands()...)
 	app.AddCommand(format.Commands()...)
+	app.AddCommand(versionext.Commands()...)
 
 	// for extension
 	app.TraverseChildren = true
