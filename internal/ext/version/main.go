@@ -39,6 +39,8 @@ type Info struct {
 	KittyBuildAt   string
 }
 
+const zeaburGitCommitSHAEnv = "ZEABUR_GIT_COMMIT_SHA"
+
 func Commands() []*cobra.Command {
 	o := &options{}
 
@@ -82,6 +84,30 @@ func (o *options) run() (string, error) {
 }
 
 func Collect(dir string, now time.Time) (Info, error) {
+	if info, ok := collectZeabur(now); ok {
+		return info, nil
+	}
+
+	return collectGit(dir, now)
+}
+
+func collectZeabur(now time.Time) (Info, bool) {
+	commit := strings.TrimSpace(os.Getenv(zeaburGitCommitSHAEnv))
+	if commit == "" {
+		return Info{}, false
+	}
+
+	commitShort := shortHash(commit)
+	return completeInfo(Info{
+		Version:        describeToVersion(commitShort),
+		GitCommit:      commit,
+		GitCommitShort: commitShort,
+		GitDescribe:    commitShort,
+		GitDirty:       false,
+	}, now), true
+}
+
+func collectGit(dir string, now time.Time) (Info, error) {
 	repo, err := openRepository(dir)
 	if err != nil {
 		return Info{}, err
@@ -108,21 +134,24 @@ func Collect(dir string, now time.Time) (Info, error) {
 		gitDescribe += "-dirty"
 	}
 
-	buildTime := now.Format(time.RFC3339)
-
-	return Info{
+	return completeInfo(Info{
 		Version:        describeToVersion(gitDescribe),
 		GitCommit:      commit,
 		GitCommitShort: commitShort,
 		GitTag:         gitTag,
 		GitDescribe:    gitDescribe,
 		GitDirty:       dirty,
-		BuildTime:      buildTime,
-		BuildID:        now.Format("20060102150405") + "-" + commitShort,
-		KittyVersion:   kittyversion.Version(),
-		KittyCommit:    kittyversion.Commit(),
-		KittyBuildAt:   kittyversion.BuildAt(),
-	}, nil
+	}, now), nil
+}
+
+func completeInfo(info Info, now time.Time) Info {
+	info.BuildTime = now.Format(time.RFC3339)
+	info.BuildID = now.Format("20060102150405") + "-" + info.GitCommitShort
+	info.KittyVersion = kittyversion.Version()
+	info.KittyCommit = kittyversion.Commit()
+	info.KittyBuildAt = kittyversion.BuildAt()
+
+	return info
 }
 
 func openRepository(dir string) (*git.Repository, error) {

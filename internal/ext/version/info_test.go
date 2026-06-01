@@ -13,6 +13,8 @@ import (
 )
 
 func TestCollectTaggedRepository(t *testing.T) {
+	disableZeaburGitEnv(t)
+
 	dir := t.TempDir()
 	repo, err := gogit.PlainInit(dir, false)
 	if err != nil {
@@ -57,6 +59,8 @@ func TestCollectTaggedRepository(t *testing.T) {
 }
 
 func TestCollectDirtyRepositoryAfterTag(t *testing.T) {
+	disableZeaburGitEnv(t)
+
 	dir := t.TempDir()
 	repo, err := gogit.PlainInit(dir, false)
 	if err != nil {
@@ -86,6 +90,36 @@ func TestCollectDirtyRepositoryAfterTag(t *testing.T) {
 	}
 }
 
+func TestCollectUsesZeaburCommitWithoutGitRepository(t *testing.T) {
+	t.Setenv(zeaburGitCommitSHAEnv, "abcdef1234567890abcdef1234567890abcdef12")
+
+	dir := t.TempDir()
+	now := time.Date(2026, 5, 20, 6, 0, 0, 0, time.UTC)
+	info, err := Collect(dir, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertZeaburInfo(t, info, "abcdef1234567890abcdef1234567890abcdef12", now)
+}
+
+func TestCollectPrefersZeaburCommitOverGitRepository(t *testing.T) {
+	t.Setenv(zeaburGitCommitSHAEnv, " fedcba9876543210fedcba9876543210fedcba98 ")
+
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, ".git"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Date(2026, 5, 20, 6, 0, 0, 0, time.UTC)
+	info, err := Collect(dir, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assertZeaburInfo(t, info, "fedcba9876543210fedcba9876543210fedcba98", now)
+}
+
 func TestRenderEnvQuotesOnlyWhenNeeded(t *testing.T) {
 	info := Info{
 		Version:        "0.0.0-test",
@@ -110,6 +144,42 @@ func TestRenderEnvQuotesOnlyWhenNeeded(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("env output does not contain %q:\n%s", want, got)
 		}
+	}
+}
+
+func disableZeaburGitEnv(t *testing.T) {
+	t.Helper()
+
+	t.Setenv(zeaburGitCommitSHAEnv, "")
+}
+
+func assertZeaburInfo(t *testing.T, info Info, commit string, now time.Time) {
+	t.Helper()
+
+	commitShort := commit[:8]
+	if info.Version != "0.0.0-"+commitShort {
+		t.Fatalf("Version = %q, want %q", info.Version, "0.0.0-"+commitShort)
+	}
+	if info.GitCommit != commit {
+		t.Fatalf("GitCommit = %q, want %q", info.GitCommit, commit)
+	}
+	if info.GitCommitShort != commitShort {
+		t.Fatalf("GitCommitShort = %q, want %q", info.GitCommitShort, commitShort)
+	}
+	if info.GitTag != "" {
+		t.Fatalf("GitTag = %q, want empty", info.GitTag)
+	}
+	if info.GitDescribe != commitShort {
+		t.Fatalf("GitDescribe = %q, want %q", info.GitDescribe, commitShort)
+	}
+	if info.GitDirty {
+		t.Fatal("GitDirty = true, want false")
+	}
+	if info.BuildTime != now.Format(time.RFC3339) {
+		t.Fatalf("BuildTime = %q, want %q", info.BuildTime, now.Format(time.RFC3339))
+	}
+	if info.BuildID != now.Format("20060102150405")+"-"+commitShort {
+		t.Fatalf("BuildID = %q, want %q", info.BuildID, now.Format("20060102150405")+"-"+commitShort)
 	}
 }
 
