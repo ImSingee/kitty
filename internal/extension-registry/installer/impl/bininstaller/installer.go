@@ -1,8 +1,11 @@
 package bininstaller
 
 import (
+	"github.com/ImSingee/go-ex/ee"
+
 	"github.com/ImSingee/kitty/internal/extension-registry/binkey"
 	"github.com/ImSingee/kitty/internal/extension-registry/installer"
+	"github.com/ImSingee/kitty/internal/extension-registry/installer/tmpl"
 	eroptions "github.com/ImSingee/kitty/internal/extension-registry/options"
 	erutils "github.com/ImSingee/kitty/internal/extension-registry/utils"
 )
@@ -31,7 +34,10 @@ type Installer struct {
 }
 
 func (i *Installer) Install(o *installer.InstallOptions) error {
-	url := i.url // TODO template render
+	url, err := tmpl.Render(i.url, o)
+	if err != nil {
+		return ee.Wrap(err, "invalid url")
+	}
 
 	return erutils.DownloadFileTo(url, o.To, 0755, o.ShowProgress)
 }
