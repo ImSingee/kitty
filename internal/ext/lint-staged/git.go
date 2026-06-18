@@ -154,13 +154,13 @@ func getSelectedFiles(options *Options, gitDir string) ([]string, error) {
 		return nil, err
 	}
 
-	return filterExistingFiles(files, gitDir), nil
+	return filterRegularFiles(files, gitDir), nil
 }
 
-func filterExistingFiles(files []string, gitDir string) []string {
+func filterRegularFiles(files []string, gitDir string) []string {
 	return mr.Filter(files, func(file string, _ int) bool {
-		_, err := os.Lstat(filepath.Join(gitDir, file))
-		return err == nil
+		info, err := os.Lstat(filepath.Join(gitDir, file))
+		return err == nil && info.Mode().IsRegular()
 	})
 }
 

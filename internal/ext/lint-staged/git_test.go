@@ -89,6 +89,68 @@ func TestGetSelectedFilesExcludesDeletedFilesForStatuses(t *testing.T) {
 	}
 }
 
+func TestGetSelectedFilesExcludesSymlinksForStatuses(t *testing.T) {
+	repo := t.TempDir()
+
+	gitRun(t, repo, "init")
+	gitRun(t, repo, "config", "user.name", "Test User")
+	gitRun(t, repo, "config", "user.email", "test@example.com")
+
+	writeFile(t, repo, "clean.txt", "clean\n")
+	writeFile(t, repo, "tracked-target.txt", "tracked\n")
+	requireSymlink(t, "tracked-target.txt", filepath.Join(repo, "tracked-link.txt"))
+
+	gitRun(t, repo, "add", ".")
+	gitRun(t, repo, "commit", "-m", "initial")
+
+	writeFile(t, repo, "staged.txt", "staged\n")
+	writeFile(t, repo, "staged-target.txt", "staged target\n")
+	requireSymlink(t, "staged-target.txt", filepath.Join(repo, "staged-link.txt"))
+	writeFile(t, repo, "untracked.txt", "untracked\n")
+	writeFile(t, repo, "untracked-target.txt", "untracked target\n")
+	requireSymlink(t, "untracked-target.txt", filepath.Join(repo, "untracked-link.txt"))
+	gitRun(t, repo, "add", "staged.txt", "staged-link.txt")
+
+	testCases := []struct {
+		name     string
+		options  *Options
+		expected []string
+	}{
+		{
+			name: "staged",
+			options: &Options{
+				Status: string(SelectionModeStaged),
+			},
+			expected: []string{"staged.txt"},
+		},
+		{
+			name: "changed",
+			options: &Options{
+				Status: string(SelectionModeChanged),
+			},
+			expected: []string{"staged-target.txt", "staged.txt", "untracked-target.txt", "untracked.txt"},
+		},
+		{
+			name: "all",
+			options: &Options{
+				Status: string(SelectionModeAll),
+			},
+			expected: []string{"clean.txt", "staged-target.txt", "staged.txt", "tracked-target.txt", "untracked-target.txt", "untracked.txt"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			files, err := getSelectedFiles(tc.options, repo)
+			require.NoError(t, err)
+			assert.ElementsMatch(t, tc.expected, files)
+			assert.NotContains(t, files, "staged-link.txt")
+			assert.NotContains(t, files, "tracked-link.txt")
+			assert.NotContains(t, files, "untracked-link.txt")
+		})
+	}
+}
+
 func gitRun(t *testing.T, dir string, args ...string) {
 	t.Helper()
 
@@ -102,4 +164,12 @@ func writeFile(t *testing.T, dir string, name string, content string) {
 	t.Helper()
 
 	require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(content), 0644))
+}
+
+func requireSymlink(t *testing.T, oldname string, newname string) {
+	t.Helper()
+
+	if err := os.Symlink(oldname, newname); err != nil {
+		t.Skipf("symlink is not supported: %v", err)
+	}
 }
